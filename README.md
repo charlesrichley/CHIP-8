@@ -1,2 +1,2 @@
 # CHIP-8
-I developed a CHIP-8 emulator using C.
+I am currently developing a CHIP-8 emulator using C (_**work in progress**_).
