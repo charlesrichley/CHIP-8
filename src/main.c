@@ -1,5 +1,8 @@
 #include "helpers.c"
 
+#define WIDTH 64
+#define HEIGHT 32
+
 // Font characters are 4 pixels wide by 5 pixels tall
 uint8_t font_arr[16][5] = {{0xF0, 0x90, 0x90, 0x90, 0xF0}, // 0
 {0x20, 0x60, 0x20, 0x20, 0x70}, // 1
@@ -20,9 +23,6 @@ uint8_t font_arr[16][5] = {{0xF0, 0x90, 0x90, 0x90, 0xF0}, // 0
 
 // Memory is 4 kB (4096 bytes). 
 // Initial space can be left empty, except for font. Start at adress 512.
-// CHIP-8 program starting at 0x200 (512 in decimal)
-#define WIDTH 64
-#define HEIGHT 32
 uint8_t memory[4096];
 uint8_t pixels[WIDTH][HEIGHT]; // notation: pixels[x][y]
 Stack stack;
@@ -37,6 +37,33 @@ uint8_t sound_timer; // Beeps as long as above zero
 
 int main(void)
 {
+    // Open file (for loading ROM data into memory)
+    FILE *ROM_file = fopen("IBM_logo.ch8", "r");
+    if (ROM_file == NULL)
+    {
+        printf("Could not open file (NULL).\n");
+        return 1;
+    }
+
+    // Determine size of file
+    // CHIP-8 program starting at 0x200 (512 in decimal)
+    fseek(ROM_file, 0, SEEK_END);
+    long size = ftell(ROM_file); // size of file in bytes
+
+    if (size > 3584) // 4096 - 0x200
+    {
+        printf("File is too large (memory exceeded).\n");
+        return 2;
+    }
+
+    // Read file into memory starting at index 0x200 (512 in decimal)
+    rewind(ROM_file);
+    fread(&memory[0x200], 1, size, ROM_file);
+    fclose(ROM_file);
+
+    // Allocate memory for fonts, starting at 0x50
+    memcpy(&memory[0x50], font_arr, sizeof(font_arr));
+
     // Initialise random number generator
     srand(time(NULL));
 
@@ -71,9 +98,6 @@ int main(void)
         SDL_Log("Renderer creation failed. Reason: %s\n", SDL_GetError());
     }
 
-    // Allocate memory for fonts, starting at 0x50
-    memcpy(&memory[0x50], font_arr, sizeof(font_arr));
-
     // Event loop
     const float target_frame_time = 1000.0f / 60.0f;  // 60 FPS, so 0.017 seconds per frame.
     bool quitting = false;
@@ -83,7 +107,7 @@ int main(void)
     while (!quitting)
     {
         uint64_t frame_start = SDL_GetPerformanceCounter();
-        
+
         while (SDL_PollEvent(&event))
         {
             switch(event.type){
@@ -419,6 +443,6 @@ int main(void)
             screen_surface = NULL;
             SDL_Quit();
     }
-    
+
     return 0;
 }
