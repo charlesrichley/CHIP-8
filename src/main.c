@@ -1,22 +1,22 @@
 #include "helpers.c"
 
 // Font characters are 4 pixels wide by 5 pixels tall
-uint8_t font_arr[] = {0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
-0x20, 0x60, 0x20, 0x20, 0x70, // 1
-0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
-0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
-0x90, 0x90, 0xF0, 0x10, 0x10, // 4
-0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
-0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
-0xF0, 0x10, 0x20, 0x40, 0x40, // 7
-0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
-0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
-0xF0, 0x90, 0xF0, 0x90, 0x90, // A
-0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
-0xF0, 0x80, 0x80, 0x80, 0xF0, // C
-0xE0, 0x90, 0x90, 0x90, 0xE0, // D
-0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
-0xF0, 0x80, 0xF0, 0x80, 0x80}; // F
+uint8_t font_arr[16][5] = {{0xF0, 0x90, 0x90, 0x90, 0xF0}, // 0
+{0x20, 0x60, 0x20, 0x20, 0x70}, // 1
+{0xF0, 0x10, 0xF0, 0x80, 0xF0}, // 2
+{0xF0, 0x10, 0xF0, 0x10, 0xF0}, // 3
+{0x90, 0x90, 0xF0, 0x10, 0x10}, // 4
+{0xF0, 0x80, 0xF0, 0x10, 0xF0}, // 5
+{0xF0, 0x80, 0xF0, 0x90, 0xF0}, // 6
+{0xF0, 0x10, 0x20, 0x40, 0x40}, // 7
+{0xF0, 0x90, 0xF0, 0x90, 0xF0}, // 8
+{0xF0, 0x90, 0xF0, 0x10, 0xF0}, // 9
+{0xF0, 0x90, 0xF0, 0x90, 0x90}, // A
+{0xE0, 0x90, 0xE0, 0x90, 0xE0}, // B
+{0xF0, 0x80, 0x80, 0x80, 0xF0}, // C
+{0xE0, 0x90, 0x90, 0x90, 0xE0}, // D
+{0xF0, 0x80, 0xF0, 0x80, 0xF0}, // E
+{0xF0, 0x80, 0xF0, 0x80, 0x80}}; // F
 
 // Memory is 4 kB (4096 bytes). 
 // Initial space can be left empty, except for font. Start at adress 512.
@@ -83,6 +83,7 @@ int main(void)
     while (!quitting)
     {
         uint64_t frame_start = SDL_GetPerformanceCounter();
+        
         while (SDL_PollEvent(&event))
         {
             switch(event.type){
@@ -340,10 +341,26 @@ int main(void)
                     case 0x7:
                         registers[x] = delay_timer;
 
-                    // FX15: timer
                     case 0x5:
-                        delay_timer = registers[x];
+                        switch(nibble_3){
+                            // FX15: timer
+                            case 0x1:
+                                delay_timer = registers[x];
+                            
+                            // FX55: store memory
+                            case 0x5:
+                                for (int i = 0; i <= x; i++)
+                                {
+                                    memory[index_register + i] = registers[i];
+                                }
 
+                            // FX65: load memory (opposite of FX55)
+                            case 0x6:
+                                for (int i = 0; i <= x; i++)
+                                {
+                                    registers[i] = memory[index_register + i];
+                                }
+                        }
                     // FX18: timer
                     case 0x8:
                         sound_timer = registers[x];
@@ -358,21 +375,25 @@ int main(void)
 
                     // FX0A: get key (stops execution, waiting for key input)
                     case 0xA:
-                        // If key released, registers[x] = hexadecimal value
-                        pc -= 2;
                         if (key_released)
                         {
-                            registers[nibble_2] = keyboard_to_chip_8(curr_key);
+                            registers[x] = keyboard_to_chip_8(curr_key);
+                        }
+                        else
+                        {
+                            pc -= 2;
                         }
 
                     // FX29: font character
                     case 0x9:
-                        // index_register = &(registers[x]);
-                        // Something involving fonts?
+                        index_register = 0x50 + registers[x];
 
-                    // binary-coded decimal conversion
-                    case 0x3: 
-
+                    // FX33: binary-coded decimal conversion
+                    case 0x3:{
+                        memory[index_register] =  (registers[x] / 100) % 10;
+                        memory[index_register + 1] = (registers[x] / 10) % 10;
+                        memory[index_register + 2] = registers[x] % 10;
+                    }
                 }
             }
             
