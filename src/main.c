@@ -22,23 +22,17 @@ uint8_t font_arr[16][5] = {{0xF0, 0x90, 0x90, 0x90, 0xF0}, // 0
 {0xF0, 0x80, 0xF0, 0x80, 0x80}}; // F
 
 // Memory is 4 kB (4096 bytes). 
-// Initial space can be left empty, except for font. Start at adress 512.
+// Initial space can be left empty (except for fonts)
 uint8_t memory[4096];
 uint8_t pixels[WIDTH][HEIGHT]; // notation: pixels[x][y]
-Stack stack;
 Keypad keypad[16];
 uint8_t registers[16];
-uint16_t index_register;
-uint16_t pc;
-
-// Timers decremented once per frame (60 Hz)
-uint8_t delay_timer;
-uint8_t sound_timer; // Beeps as long as above zero
+Stack stack;
 
 int main(void)
 {
     // Open file (for loading ROM data into memory)
-    FILE *ROM_file = fopen("IBM_logo.ch8", "r");
+    FILE *ROM_file = fopen("test_opcode.ch8", "r");
     if (ROM_file == NULL)
     {
         printf("Could not open file (NULL).\n");
@@ -104,9 +98,17 @@ int main(void)
     bool key_released = false;
     SDL_Event event;
     SDL_zero(event);
+
+    uint16_t pc = 0x200;
+    uint16_t index_register = 0;
+    // Timers decremented once per frame (60 Hz)
+    uint8_t delay_timer = 0;
+    uint8_t sound_timer = 0; // Beeps as long as above zero
+
     while (!quitting)
     {
         uint64_t frame_start = SDL_GetPerformanceCounter();
+        SDL_RenderClear(renderer);
 
         while (SDL_PollEvent(&event))
         {
@@ -118,6 +120,15 @@ int main(void)
                     key_released = true;
             }
         }
+
+        // Reset pixels to black
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        for (int i = 0; i < WIDTH; i++)
+            for (int j = 0; j < HEIGHT; j++)
+            {
+                SDL_FRect rect = find_rect(i, j, scale);
+                SDL_RenderFillRect(renderer, &rect);
+            }
 
         // Update timers
         if (sound_timer > 0)
@@ -268,7 +279,7 @@ int main(void)
 
                     // 8XYE: shift
                     case 0xE: {
-                        registers[x] = registers[y]; // Optional
+                        registers[x] = registers[y]; // Optional (ambigious instruction)
                         uint8_t shifted_out = (registers[x] & 1);
                         registers[x] = registers[x] << 1;
 
@@ -283,7 +294,7 @@ int main(void)
                     }
                 }
 
-            // 9XY0: skip conditionally (if nibble_1 != nibble_2, skip)
+            // 9XY0: skip conditionally
             case 0x9:
                 if (nibble_1 != x)
                 {
@@ -421,18 +432,30 @@ int main(void)
                 }
             }
             
-        // Black background
-        SDL_FillSurfaceRect(screen_surface, NULL, SDL_MapSurfaceRGB(screen_surface, 0, 0, 0));
-
+        // Render pixels that are turned on
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        for (int i = 0; i < WIDTH; i++)
+        {
+            for (int j = 0; j < HEIGHT; j++)
+            {
+                if (pixels[i][j] == 1)
+                {
+                    SDL_FRect rect = find_rect(i, j, scale);
+                    SDL_RenderFillRect(renderer, &rect);
+                }
+            }
+        }
+        
         // Measuring time of frame in order to manage FPS
         Uint64 frame_end = SDL_GetPerformanceCounter();
         float elapsed = (frame_end - frame_start) / (float)SDL_GetPerformanceFrequency() * 1000.0f;
-        if (elapsed < target_frame_time)
+        if (target_frame_time > elapsed)
         {
             SDL_Delay((Uint32)(target_frame_time - elapsed));
         }
 
         SDL_UpdateWindowSurface(window);
+        SDL_RenderPresent(renderer);
     }
     
     if (quitting)
