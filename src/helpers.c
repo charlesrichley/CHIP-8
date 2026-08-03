@@ -1,19 +1,5 @@
 #include "header.h"
 
-typedef struct 
-{
-    uint16_t arr[16];
-    int top;
-} Stack;
-
-typedef struct 
-{
-    int chip_8;
-    char keyboard;
-    bool is_on;
-
-} Keypad;
-
 int chip_8_arr[16] = {0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF};
 char keyboard_arr[16] = {'1', '2', '3', '4', 'Q', 'W', 'E', 'R', 'A', 'S', 'D','F', 'Z', 'X', 'C', 'V'};
 
@@ -67,11 +53,11 @@ void printNum(u_int16_t x)
     printf("%" PRIu16 "\n", x);
 }
 
-void clear_pixels(uint8_t pixels[][32], int i, int j)
+void clear_pixels(uint8_t pixels[64][32], int w, int h)
 {
-    for (int a = 0; a < i; a++)
+    for (int a = 0; a < w; a++)
     {
-        for (int b = 0; b < j; b++)
+        for (int b = 0; b < h; b++)
         {
             pixels[a][b] = 0;
         }
@@ -100,4 +86,14 @@ int keyboard_to_chip_8(int keyboard)
         }
     }
     return -1;
+}
+
+SDL_FRect find_rect(int i, int j, int w, int h)
+{
+    SDL_FRect rect;
+    rect.x = i - w / 2 ; 
+    rect.y = j - w / 2;
+    rect.w = w;
+    rect.h = h;
+    return rect;
 }
