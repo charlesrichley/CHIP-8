@@ -1,4 +1,4 @@
-#include "helpers.c"
+#include "header.h"
 
 #define WIDTH 64
 #define HEIGHT 32
@@ -92,6 +92,8 @@ int main(void)
         SDL_Log("Renderer creation failed. Reason: %s\n", SDL_GetError());
     }
 
+    SDL_SetRenderLogicalPresentation(renderer, WIDTH, HEIGHT, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
+
     // Event loop
     const float target_frame_time = 1000.0f / 60.0f;  // 60 FPS, so 0.017 seconds per frame.
     bool quitting = false;
@@ -126,7 +128,7 @@ int main(void)
         for (int i = 0; i < WIDTH; i++)
             for (int j = 0; j < HEIGHT; j++)
             {
-                SDL_FRect rect = find_rect(i, j, scale);
+                SDL_FRect rect = find_rect(i, j, WIDTH, HEIGHT);
                 SDL_RenderFillRect(renderer, &rect);
             }
 
@@ -318,8 +320,8 @@ int main(void)
                 int sprite_index = index_register;
                 uint16_t sprite_height = nibble_4;
                 // sprite_width is 1 byte (8 bits)
-                uint8_t x_coord = (registers[x] % WIDTH) * scale;
-                uint8_t y_coord = (registers[y] % HEIGHT) * scale;
+                uint8_t x_coord = registers[x] % WIDTH;
+                uint8_t y_coord = registers[y] % HEIGHT;
                 registers[0XF] = 0;
 
                 // i represents y_cooordinate, j is used to index sprite pixels
@@ -440,7 +442,7 @@ int main(void)
             {
                 if (pixels[i][j] == 1)
                 {
-                    SDL_FRect rect = find_rect(i, j, scale);
+                    SDL_FRect rect = find_rect(i, j, WIDTH, HEIGHT);
                     SDL_RenderFillRect(renderer, &rect);
                 }
             }
@@ -454,7 +456,6 @@ int main(void)
             SDL_Delay((Uint32)(target_frame_time - elapsed));
         }
 
-        SDL_UpdateWindowSurface(window);
         SDL_RenderPresent(renderer);
     }
     
