@@ -28,6 +28,7 @@ uint8_t pixels[WIDTH][HEIGHT]; // indexing: pixels[x][y]
 Keypad keypad[16];
 uint8_t registers[16];
 Stack stack;
+SDL_FRect rects_arr[WIDTH][HEIGHT];
 
 int main(void)
 {
@@ -73,6 +74,15 @@ int main(void)
         keypad[i].is_on = false;
     }
 
+    // Initialise rect array for rendering pixels
+    for (int i = 0; i < WIDTH; i++)
+    {
+        for (int j = 0; j < HEIGHT; j++)
+        {
+            rects_arr[i][j] = find_rect(i, j, 1, 1);
+        }
+    }
+
     // Initialise SDL
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
@@ -86,9 +96,8 @@ int main(void)
     {
         SDL_Log("Window creation failed. Reason: %s\n", SDL_GetError());
     }
-    SDL_Surface* screen_surface = SDL_GetWindowSurface(window);
 
-    SDL_Renderer* renderer = SDL_GetRenderer(window);
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, NULL);
     if (renderer == NULL){
         SDL_Log("Renderer creation failed. Reason: %s\n", SDL_GetError());
     }
@@ -125,12 +134,12 @@ int main(void)
             }
         }
 
-        // Reset pixels to black
+        // Reset pixels to black, which are later rendered based off pixels array
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         for (int i = 0; i < WIDTH; i++)
             for (int j = 0; j < HEIGHT; j++)
             {
-                SDL_FRect rect = find_rect(i, j, WIDTH, HEIGHT);
+                SDL_FRect rect = rects_arr[i][j];
                 SDL_RenderFillRect(renderer, &rect);
             }
 
@@ -443,7 +452,7 @@ int main(void)
             {
                 if (pixels[i][j] == 1)
                 {
-                    SDL_FRect rect = find_rect(i, j, WIDTH, HEIGHT);
+                    SDL_FRect rect = rects_arr[i][j];
                     SDL_RenderFillRect(renderer, &rect);
                 }
             }
@@ -463,9 +472,8 @@ int main(void)
     if (quitting)
     {
             SDL_DestroyWindow(window);
-            SDL_DestroySurface(screen_surface);
+            SDL_DestroyRenderer(renderer);
             window = NULL;
-            screen_surface = NULL;
             SDL_Quit();
     }
 
