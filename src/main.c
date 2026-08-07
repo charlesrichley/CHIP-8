@@ -2,6 +2,7 @@
 
 #define WIDTH 64
 #define HEIGHT 32
+#define SCALE 16
 
 // Font characters are 4 pixels wide by 5 pixels tall
 uint8_t sprite_arr[80] = {0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -89,9 +90,7 @@ int main(void)
         SDL_Log("Window initialisation failed! Reason: %s\n", SDL_GetError());
     }
 
-    const int scale = 15;  // Scale factor to increase size visually
-
-    SDL_Window* window = SDL_CreateWindow("CHIP-8", WIDTH * scale, HEIGHT * scale, 0);
+    SDL_Window* window = SDL_CreateWindow("CHIP-8", WIDTH * SCALE, HEIGHT * SCALE, 0);
     if (window == NULL)
     {
         SDL_Log("Window creation failed. Reason: %s\n", SDL_GetError());
@@ -137,11 +136,13 @@ int main(void)
         // Reset pixels to black, which are later rendered based off pixels array
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         for (int i = 0; i < WIDTH; i++)
+        {
             for (int j = 0; j < HEIGHT; j++)
             {
                 SDL_FRect rect = rects_arr[i][j];
                 SDL_RenderFillRect(renderer, &rect);
             }
+        }
 
         // Update timers
         if (sound_timer > 0)
@@ -155,7 +156,7 @@ int main(void)
 
         // Fetch
         uint16_t instruction_1 = memory[pc] << 8;
-        uint16_t instruction_2 = memory[pc+1];
+        uint16_t instruction_2 = memory[pc + 1];
         uint16_t opcode = instruction_1 | instruction_2;
         pc += 2;
 
@@ -163,10 +164,10 @@ int main(void)
 
         // Opcode is made up of 4 nibbles (each 4 bits), so we use masking and shifting to get each nibble
 
-        uint8_t mask = 0xF; // all 4 bits (1111 in binary)
-        uint8_t nibble_1 = (opcode << 12) & mask; // kind of instruction
-        uint8_t nibble_2 = (opcode << 8) & mask; // look up one of 16 registers (VX) from V0 to VF
-        uint8_t nibble_3 = (opcode << 4) & mask; // look up one of 16 registers (VY) 
+        uint8_t mask = 0xF; // 4 rightmost bits (1111 in binary)
+        uint8_t nibble_1 = (opcode >> 12) & mask; // find the kind of instruction
+        uint8_t nibble_2 = (opcode >> 8) & mask; // VX register
+        uint8_t nibble_3 = (opcode >> 4) & mask; // VY register
         uint8_t nibble_4 = opcode & mask;
         uint8_t N = opcode & 0x000F;
         uint8_t NN = opcode & 0x00FF;
@@ -325,7 +326,7 @@ int main(void)
 
             // CXNN: random
             case 0xC:
-                registers[x] = (rand() & NN);
+                registers[x] = rand() & NN;
             
             // DXYN: display
             case 0xD:{
@@ -457,6 +458,8 @@ int main(void)
                 }
             }
         }
+
+        SDL_RenderPresent(renderer);
         
         // Measuring time of frame in order to manage FPS
         Uint64 frame_end = SDL_GetPerformanceCounter();
@@ -465,8 +468,6 @@ int main(void)
         {
             SDL_Delay((Uint32)(target_frame_time - elapsed));
         }
-
-        SDL_RenderPresent(renderer);
     }
     
     if (quitting)
@@ -474,6 +475,7 @@ int main(void)
             SDL_DestroyWindow(window);
             SDL_DestroyRenderer(renderer);
             window = NULL;
+            renderer = NULL;
             SDL_Quit();
     }
 
