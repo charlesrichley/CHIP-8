@@ -55,11 +55,11 @@ void printNum(u_int16_t x)
 
 void clear_pixels(uint8_t pixels[64][32], int w, int h)
 {
-    for (int a = 0; a < w; a++)
+    for (int i = 0; i < w; i++)
     {
-        for (int b = 0; b < h; b++)
+        for (int j = 0; j < h; j++)
         {
-            pixels[a][b] = 0;
+            pixels[i][j] = 0;
         }
     }
 }
@@ -92,7 +92,7 @@ SDL_FRect find_rect(int i, int j, int w, int h)
 {
     SDL_FRect rect;
     rect.x = i - w / 2 ; 
-    rect.y = j - w / 2;
+    rect.y = j - h / 2;
     rect.w = w;
     rect.h = h;
     return rect;
