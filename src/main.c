@@ -4,27 +4,27 @@
 #define HEIGHT 32
 
 // Font characters are 4 pixels wide by 5 pixels tall
-uint8_t font_arr[16][5] = {{0xF0, 0x90, 0x90, 0x90, 0xF0}, // 0
-{0x20, 0x60, 0x20, 0x20, 0x70}, // 1
-{0xF0, 0x10, 0xF0, 0x80, 0xF0}, // 2
-{0xF0, 0x10, 0xF0, 0x10, 0xF0}, // 3
-{0x90, 0x90, 0xF0, 0x10, 0x10}, // 4
-{0xF0, 0x80, 0xF0, 0x10, 0xF0}, // 5
-{0xF0, 0x80, 0xF0, 0x90, 0xF0}, // 6
-{0xF0, 0x10, 0x20, 0x40, 0x40}, // 7
-{0xF0, 0x90, 0xF0, 0x90, 0xF0}, // 8
-{0xF0, 0x90, 0xF0, 0x10, 0xF0}, // 9
-{0xF0, 0x90, 0xF0, 0x90, 0x90}, // A
-{0xE0, 0x90, 0xE0, 0x90, 0xE0}, // B
-{0xF0, 0x80, 0x80, 0x80, 0xF0}, // C
-{0xE0, 0x90, 0x90, 0x90, 0xE0}, // D
-{0xF0, 0x80, 0xF0, 0x80, 0xF0}, // E
-{0xF0, 0x80, 0xF0, 0x80, 0x80}}; // F
+uint8_t sprite_arr[80] = {0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+0x20, 0x60, 0x20, 0x20, 0x70, // 1
+0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+0xF0, 0x80, 0xF0, 0x80, 0x80}; // F
 
 // Memory is 4 kB (4096 bytes). 
 // Initial space can be left empty (except for fonts)
 uint8_t memory[4096];
-uint8_t pixels[WIDTH][HEIGHT]; // notation: pixels[x][y]
+uint8_t pixels[WIDTH][HEIGHT]; // indexing: pixels[x][y]
 Keypad keypad[16];
 uint8_t registers[16];
 Stack stack;
@@ -32,7 +32,7 @@ Stack stack;
 int main(void)
 {
     // Open file (for loading ROM data into memory)
-    FILE *ROM_file = fopen("test_opcode.ch8", "r");
+    FILE *ROM_file = fopen("ibm_logo.ch8", "r");
     if (ROM_file == NULL)
     {
         printf("Could not open file (NULL).\n");
@@ -46,6 +46,7 @@ int main(void)
 
     if (size > 3584) // 4096 - 0x200
     {
+
         printf("File is too large (memory exceeded).\n");
         return 2;
     }
@@ -56,7 +57,7 @@ int main(void)
     fclose(ROM_file);
 
     // Allocate memory for fonts, starting at 0x50
-    memcpy(&memory[0x50], font_arr, sizeof(font_arr));
+    memcpy(&memory[0x50], sprite_arr, sizeof(sprite_arr));
 
     // Initialise random number generator
     srand(time(NULL));
@@ -94,18 +95,19 @@ int main(void)
 
     SDL_SetRenderLogicalPresentation(renderer, WIDTH, HEIGHT, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
 
+    uint16_t pc = 0x200;
+    uint16_t index_register = 0;
+
+    // Timers decremented once per frame (60 Hz)
+    uint8_t delay_timer = 0;
+    uint8_t sound_timer = 0; // Beeps as long as above zero
+
     // Event loop
     const float target_frame_time = 1000.0f / 60.0f;  // 60 FPS, so 0.017 seconds per frame.
     bool quitting = false;
     bool key_released = false;
     SDL_Event event;
     SDL_zero(event);
-
-    uint16_t pc = 0x200;
-    uint16_t index_register = 0;
-    // Timers decremented once per frame (60 Hz)
-    uint8_t delay_timer = 0;
-    uint8_t sound_timer = 0; // Beeps as long as above zero
 
     while (!quitting)
     {
@@ -153,12 +155,13 @@ int main(void)
         // Opcode is made up of 4 nibbles (each 4 bits), so we use masking and shifting to get each nibble
 
         uint8_t mask = 0xF; // all 4 bits (1111 in binary)
-        uint8_t nibble_1 = (opcode << 12 & mask); // kind of instruction
-        uint8_t nibble_2 = (opcode << 8 & mask); // look up one of 16 registers (VX) from V0 to VF
-        uint8_t nibble_3 = (opcode << 4 & mask); // look up one of 16 registers (VY) 
-        uint8_t nibble_4 = (opcode & mask);
-        uint8_t NN = (opcode & 0x00FF);
-        uint16_t NNN = (opcode & 0x0FFF);
+        uint8_t nibble_1 = (opcode << 12) & mask; // kind of instruction
+        uint8_t nibble_2 = (opcode << 8) & mask; // look up one of 16 registers (VX) from V0 to VF
+        uint8_t nibble_3 = (opcode << 4) & mask; // look up one of 16 registers (VY) 
+        uint8_t nibble_4 = opcode & mask;
+        uint8_t N = opcode & 0x000F;
+        uint8_t NN = opcode & 0x00FF;
+        uint16_t NNN = opcode & 0x0FFF;
 
         uint8_t x = nibble_2;
         uint8_t y = nibble_3;
@@ -314,47 +317,44 @@ int main(void)
             // CXNN: random
             case 0xC:
                 registers[x] = (rand() & NN);
-
+            
             // DXYN: display
             case 0xD:{
-                int sprite_index = index_register;
-                uint16_t sprite_height = nibble_4;
-                // sprite_width is 1 byte (8 bits)
                 uint8_t x_coord = registers[x] % WIDTH;
                 uint8_t y_coord = registers[y] % HEIGHT;
                 registers[0XF] = 0;
 
-                // i represents y_cooordinate, j is used to index sprite pixels
-                for (int i = y_coord, j = 0; i < y_coord + sprite_height; i--, j++)
+                for (int row = 0; row < N; row++)
                 {
-                    if (i >= HEIGHT)
+                    if (y_coord >= HEIGHT)
                     {
                         break;
                     }
-                    uint8_t sprite_pixels = memory[sprite_index + j];
-                    uint8_t curr_pixels = pixels[x_coord][y_coord];
-                    for (int k = 0; k < 8; k++)
+
+                    uint8_t sprite = sprite_arr[index_register + row];
+                    uint8_t x_max = x_coord + 8;
+
+                    for (int i = 7; i >= 0; i--)
                     {
-                        if (x_coord + k >= WIDTH)
+                        uint8_t sprite_pixel = (sprite >> i) & 0x1;
+                        uint8_t screen_pixel = pixels[x_coord][y_coord];
+
+                        if (sprite_pixel == 1 && screen_pixel == 1)
                         {
-                            continue;
-                        }
-                        uint8_t curr_pixel = (curr_pixels >> (7-k) & 1);
-                        uint8_t curr_sprite_pixel = (sprite_pixels >> (7-k) & 1);
-                        bool curr_pixel_on = (curr_pixel == 1);
-                        bool curr_sprite_pixel_on = (curr_sprite_pixel == 1);
-                        if (curr_pixel_on && curr_sprite_pixel_on)
-                        {
+                            pixels[x_coord][y_coord] = 0;
                             registers[0xF] = 1;
                         }
-                        if (!(curr_pixel_on) && curr_sprite_pixel_on)
+                        else if (sprite_pixel == 1 && screen_pixel == 0)
                         {
-                            pixels[x_coord + k][i] = 1;
+                            pixels[x_coord][y_coord] = 1;
                         }
+                        
+                        x_coord += 1;
                     }
+                    y_coord += 1;
                 }
-            }
-                
+            } 
+
             case 0xE:
                 switch(nibble_4){
                     // EX9E: skip if key
@@ -398,6 +398,7 @@ int main(void)
                                     registers[i] = memory[index_register + i];
                                 }
                         }
+                    
                     // FX18: timer
                     case 0x8:
                         sound_timer = registers[x];
