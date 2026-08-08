@@ -42,22 +42,11 @@ int pop(Stack *stack)
     return popped_number;
 }
 
-// Returns the top element of stack
-uint16_t peek(uint16_t *ptr)
+void clear_pixels(uint8_t pixels[WIDTH][HEIGHT])
 {
-    return 0;
-}
-
-void printNum(u_int16_t x)
-{
-    printf("%" PRIu16 "\n", x);
-}
-
-void clear_pixels(uint8_t pixels[64][32], int w, int h)
-{
-    for (int i = 0; i < w; i++)
+    for (int i = 0; i < WIDTH; i++)
     {
-        for (int j = 0; j < h; j++)
+        for (int j = 0; j < HEIGHT; j++)
         {
             pixels[i][j] = 0;
         }
@@ -91,9 +80,46 @@ int keyboard_to_chip_8(int keyboard)
 SDL_FRect find_rect(int i, int j, int w, int h)
 {
     SDL_FRect rect;
-    rect.x = i - w / 2 ; 
-    rect.y = j - h / 2;
+    rect.x = i; 
+    rect.y = j;
     rect.w = w;
     rect.h = h;
     return rect;
+}
+
+void printNum(u_int16_t x)
+{
+    printf("%" PRIu16 "\n", x);
+}
+
+void print_pixels(uint8_t pixels[WIDTH][HEIGHT])
+{
+    for (int i = 0; i < WIDTH; i++)
+    {
+        for (int j = 0; j < HEIGHT; j++)
+        {
+            printf("%i / ", pixels[i][j]);
+        }
+    }
+}
+
+void pixels_on(uint8_t pixels[WIDTH][HEIGHT])
+{
+    for (int i = 0; i < WIDTH; i++)
+    {
+        for (int j = 0; j < HEIGHT; j++)
+        {
+            pixels[i][j] = 1;
+        }
+    }
+}
+
+void print_memory(uint8_t memory[4096])
+{
+    for (int i = 0; i < 4096; i++)
+    {
+        uint8_t curr = memory[i];
+        printf("%u / ", curr);
+    }
+    printf("\n");
 }
