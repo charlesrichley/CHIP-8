@@ -1,9 +1,5 @@
 #include "header.h"
 
-#define WIDTH 64
-#define HEIGHT 32
-#define SCALE 16
-
 // Font characters are 4 pixels wide by 5 pixels tall
 uint8_t sprite_arr[80] = {0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
 0x20, 0x60, 0x20, 0x20, 0x70, // 1
@@ -34,7 +30,7 @@ SDL_FRect rects_arr[WIDTH][HEIGHT];
 int main(void)
 {
     // Open file (for loading ROM data into memory)
-    FILE *ROM_file = fopen("ibm_logo.ch8", "r");
+    FILE *ROM_file = fopen("test_opcode.ch8", "r");
     if (ROM_file == NULL)
     {
         printf("Could not open file (NULL).\n");
@@ -46,7 +42,7 @@ int main(void)
     fseek(ROM_file, 0, SEEK_END);
     long size = ftell(ROM_file); // size of file in bytes
 
-    if (size > 3584) // 4096 - 0x200
+    if (size > (4096 - 0x200))
     {
 
         printf("File is too large (memory exceeded).\n");
@@ -55,7 +51,7 @@ int main(void)
 
     // Read file into memory starting at index 0x200 (512 in decimal)
     rewind(ROM_file);
-    fread(&memory[0x200], 1, size, ROM_file);
+    fread(&memory[0x200], sizeof(uint8_t), size, ROM_file);
     fclose(ROM_file);
 
     // Allocate memory for fonts, starting at 0x50
@@ -64,10 +60,10 @@ int main(void)
     // Initialise random number generator
     srand(time(NULL));
 
-    // Initialising stack
+    // Initialise stack
     initialise(&stack);
 
-    // Initialising keypad
+    // Initialise keypad
     for (int i = 0; i < 16; i++)
     {
         keypad[i].chip_8 = chip_8_arr[i];
@@ -83,6 +79,7 @@ int main(void)
             rects_arr[i][j] = find_rect(i, j, 1, 1);
         }
     }
+    // print_memory(memory);
 
     // Initialise SDL
     if (!SDL_Init(SDL_INIT_VIDEO))
@@ -101,6 +98,7 @@ int main(void)
         SDL_Log("Renderer creation failed. Reason: %s\n", SDL_GetError());
     }
 
+    // Allow renderer to adjust to window size (adjusted by scale factor)
     SDL_SetRenderLogicalPresentation(renderer, WIDTH, HEIGHT, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
 
     uint16_t pc = 0x200;
@@ -108,7 +106,7 @@ int main(void)
 
     // Timers decremented once per frame (60 Hz)
     uint8_t delay_timer = 0;
-    uint8_t sound_timer = 0; // Beeps as long as above zero
+    uint8_t sound_timer = 0;
 
     // Event loop
     const float target_frame_time = 1000.0f / 60.0f;  // 60 FPS, so 0.017 seconds per frame.
@@ -119,7 +117,7 @@ int main(void)
 
     while (!quitting)
     {
-        uint64_t frame_start = SDL_GetPerformanceCounter();
+        uint64_t frame_start = SDL_GetTicksNS();
         SDL_RenderClear(renderer);
 
         while (SDL_PollEvent(&event))
@@ -134,7 +132,7 @@ int main(void)
         }
 
         // Reset pixels to black, which are later rendered based off pixels array
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
         for (int i = 0; i < WIDTH; i++)
         {
             for (int j = 0; j < HEIGHT; j++)
@@ -169,7 +167,7 @@ int main(void)
         uint8_t nibble_2 = (opcode >> 8) & mask; // VX register
         uint8_t nibble_3 = (opcode >> 4) & mask; // VY register
         uint8_t nibble_4 = opcode & mask;
-        uint8_t N = opcode & 0x000F;
+        uint8_t N = nibble_4;
         uint8_t NN = opcode & 0x00FF;
         uint16_t NNN = opcode & 0x0FFF;
 
@@ -189,23 +187,27 @@ int main(void)
                 switch(nibble_4){
                     // 00E0: clear screen
                     case 0x0:
-                        clear_pixels(pixels, WIDTH, HEIGHT);
+                        clear_pixels(pixels);
                         break;
 
                     // 00EE: returning from subroutine
                     case 0xE:
                         // Remove last address from stack, set PC to it
                         pc = pop(&stack);
+                        break;
                 }
+                break;
 
             // 1NNN: jump (set pc = NNN)
             case 0x1:
                 pc = NNN;
+                break;
 
             // 2NNN: call (push pc to stack and set pc = NNN)
             case 0x2:
-            push(&stack, pc);
-            pc = NNN;
+                push(&stack, pc);
+                pc = NNN;
+                break;
 
             // 3XNN: skip conditionally (if Vx == NN, skip)
             case 0x3:
@@ -213,6 +215,7 @@ int main(void)
                 {
                     pc += 2;
                 }
+                break;
 
             // 4XNN: skip conditionally (if Vx != NN, skip)
             case 0x4:
@@ -220,6 +223,7 @@ int main(void)
                 {
                     pc += 2;
                 }
+                break;
             
             // 5XY0 skip conditionally (if nibble_1 == x, skip)
             case 0x5:
@@ -227,14 +231,17 @@ int main(void)
                 {
                     pc += 2;
                 }
+                break;
 
             // 6XNN: set (register VX to NN)
             case 0x6:
                 registers[x] = NN;
+                break;
 
             // 7XNN: add (add NN to VX)
             case 0x7:
                 registers[x] += NN;
+                break;
 
             case 0x8:
                 // decide instruction based on final nibble
@@ -242,18 +249,22 @@ int main(void)
                     // 8XY0: set
                     case 0x0:
                         registers[x] = registers[y];
+                        break;
                     
                     // 8XY1: binary OR
                     case 0x1:
                         registers[x] = (registers[x] | registers[y]);
+                        break;
                     
                     // 8XY2: binary AND
                     case 0x2:
                         registers[x] = (registers[x] & registers[y]);
+                        break;
 
                     // 8XY3: logical XOR
                     case 0x3:
                         registers[x] = registers[x] & registers[y];
+                        break;
 
                     // 8XY4: add
                     case 0x4:
@@ -267,10 +278,12 @@ int main(void)
                             registers[0xF] = 0;
                         }
                         registers[x] += registers[y];
+                        break;
 
                     // 8XY5: subtract
                     case 0x5:
                         registers[x] -= registers[y]; 
+                        break;
                     
                     // 8XY6 and 8XYE: shift (ambigious instruction)
                     case 0x6:{
@@ -286,11 +299,13 @@ int main(void)
                         {
                             registers[0xF] = 0;
                         }
+                        break;
                     }
 
                     // 8XY7: subtract
                     case 0x7:
                         registers[x] = registers[y] - registers[x];
+                        break;
 
                     // 8XYE: shift
                     case 0xE: {
@@ -306,41 +321,46 @@ int main(void)
                         {
                             registers[0xF] = 0;
                         }
+                        break;
                     }
+                    break;
                 }
-
             // 9XY0: skip conditionally
             case 0x9:
                 if (nibble_1 != x)
                 {
                     pc += 2;
                 }
+                break;
             
             // ANNN: set index
             case 0xA:
                 index_register = NNN;
+                break;
 
             // BNNN: jump with offset (ambiguous)
             case 0xB:
                 pc += (NNN + registers[0x0]);
+                break;
 
             // CXNN: random
             case 0xC:
                 registers[x] = rand() & NN;
+                break;
             
             // DXYN: display
             case 0xD:{
-                uint8_t x_coord = registers[x] % WIDTH;
+                uint8_t x_start = registers[x] % WIDTH;
                 uint8_t y_coord = registers[y] % HEIGHT;
                 registers[0XF] = 0;
 
                 for (int row = 0; row < N; row++)
                 {
-                    if (y_coord >= HEIGHT)
+                    if (y_coord >= HEIGHT || y_coord < 0)
                     {
                         break;
                     }
-
+                    uint8_t x_coord = x_start;
                     uint8_t sprite = sprite_arr[index_register + row];
                     uint8_t x_max = x_coord + 8;
 
@@ -348,6 +368,11 @@ int main(void)
                     {
                         uint8_t sprite_pixel = (sprite >> i) & 0x1;
                         uint8_t screen_pixel = pixels[x_coord][y_coord];
+
+                        if (x_coord >= WIDTH || x_coord < 0)
+                        {
+                            break;
+                        }
 
                         if (sprite_pixel == 1 && screen_pixel == 1)
                         {
@@ -363,6 +388,7 @@ int main(void)
                     }
                     y_coord += 1;
                 }
+                break;
             } 
 
             case 0xE:
@@ -373,6 +399,7 @@ int main(void)
                         {
                             pc += 2;
                         }
+                        break;
                         
                     // EXA1: skip if key
                     case 0x1:
@@ -380,19 +407,23 @@ int main(void)
                         {
                             pc += 2;
                         }
+                        break;
                 }
+                break;
 
             case 0xF:
                 switch(nibble_4){
                     // FX07: timer
                     case 0x7:
                         registers[x] = delay_timer;
+                        break;
 
                     case 0x5:
                         switch(nibble_3){
                             // FX15: timer
                             case 0x1:
                                 delay_timer = registers[x];
+                                break;
                             
                             // FX55: store memory
                             case 0x5:
@@ -400,6 +431,7 @@ int main(void)
                                 {
                                     memory[index_register + i] = registers[i];
                                 }
+                                break;
 
                             // FX65: load memory (opposite of FX55)
                             case 0x6:
@@ -407,11 +439,14 @@ int main(void)
                                 {
                                     registers[i] = memory[index_register + i];
                                 }
+                                break;
                         }
+                        break;
                     
                     // FX18: timer
                     case 0x8:
                         sound_timer = registers[x];
+                        break;
 
                     // FX1E: add to index
                     case 0xE:
@@ -420,6 +455,7 @@ int main(void)
                         {
                             registers[0xF] = 1;
                         }
+                        break;
 
                     // FX0A: get key (stops execution, waiting for key input)
                     case 0xA:
@@ -431,22 +467,27 @@ int main(void)
                         {
                             pc -= 2;
                         }
+                        break;
 
                     // FX29: font character
                     case 0x9:
                         index_register = 0x50 + registers[x];
+                        break;
 
                     // FX33: binary-coded decimal conversion
                     case 0x3:{
                         memory[index_register] =  (registers[x] / 100) % 10;
                         memory[index_register + 1] = (registers[x] / 10) % 10;
                         memory[index_register + 2] = registers[x] % 10;
+                        break;
                     }
+                    break;
                 }
+                break;
             }
             
         // Render pixels that are turned on
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
         for (int i = 0; i < WIDTH; i++)
         {
             for (int j = 0; j < HEIGHT; j++)
@@ -462,21 +503,21 @@ int main(void)
         SDL_RenderPresent(renderer);
         
         // Measuring time of frame in order to manage FPS
-        Uint64 frame_end = SDL_GetPerformanceCounter();
-        float elapsed = (frame_end - frame_start) / (float)SDL_GetPerformanceFrequency() * 1000.0f;
+        Uint64 frame_end = SDL_GetTicksNS();
+        float elapsed = (frame_end - frame_start) / 1e6f; // Convert from NS to MS
         if (target_frame_time > elapsed)
         {
             SDL_Delay((Uint32)(target_frame_time - elapsed));
         }
     }
-    
+
     if (quitting)
     {
-            SDL_DestroyWindow(window);
-            SDL_DestroyRenderer(renderer);
-            window = NULL;
-            renderer = NULL;
-            SDL_Quit();
+        SDL_DestroyWindow(window);
+        SDL_DestroyRenderer(renderer);
+        window = NULL;
+        renderer = NULL;
+        SDL_Quit();
     }
 
     return 0;
