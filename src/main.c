@@ -29,8 +29,9 @@ SDL_FRect rects_arr[WIDTH][HEIGHT];
 
 int main(void)
 {
+    int i = 0;
     // Open file (for loading ROM data into memory)
-    FILE *ROM_file = fopen("test_opcode.ch8", "r");
+    FILE *ROM_file = fopen("bc_test.ch8", "r");
     if (ROM_file == NULL)
     {
         printf("Could not open file (NULL).\n");
@@ -76,10 +77,9 @@ int main(void)
     {
         for (int j = 0; j < HEIGHT; j++)
         {
-            rects_arr[i][j] = find_rect(i, j, 1, 1);
+            rects_arr[i][j] = get_frect(i, j, 1, 1);
         }
     }
-    // print_memory(memory);
 
     // Initialise SDL
     if (!SDL_Init(SDL_INIT_VIDEO))
@@ -152,340 +152,347 @@ int main(void)
             delay_timer -= 1;
         }
 
-        // Fetch
-        uint16_t instruction_1 = memory[pc] << 8;
-        uint16_t instruction_2 = memory[pc + 1];
-        uint16_t opcode = instruction_1 | instruction_2;
-        pc += 2;
-
-        // Decode
-
-        // Opcode is made up of 4 nibbles (each 4 bits), so we use masking and shifting to get each nibble
-
-        uint8_t mask = 0xF; // 4 rightmost bits (1111 in binary)
-        uint8_t nibble_1 = (opcode >> 12) & mask; // find the kind of instruction
-        uint8_t nibble_2 = (opcode >> 8) & mask; // VX register
-        uint8_t nibble_3 = (opcode >> 4) & mask; // VY register
-        uint8_t nibble_4 = opcode & mask;
-        uint8_t N = nibble_4;
-        uint8_t NN = opcode & 0x00FF;
-        uint16_t NNN = opcode & 0x0FFF;
-
-        uint8_t x = nibble_2;
-        uint8_t y = nibble_3;
-
-        // Execute
-
-        // Keyboard input
-        uint8_t curr_key = chip_8_to_keyboard(registers[nibble_2]);
-        const bool *keys = SDL_GetKeyboardState(NULL);
-        SDL_Scancode scancode = SDL_GetScancodeFromKey(curr_key, NULL);
-
-        // Type of instruction
-        switch (nibble_1){
-            case 0x0:
-                switch(nibble_4){
-                    // 00E0: clear screen
-                    case 0x0:
-                        clear_pixels(pixels);
-                        break;
-
-                    // 00EE: returning from subroutine
-                    case 0xE:
-                        // Remove last address from stack, set PC to it
-                        pc = pop(&stack);
-                        break;
-                }
-                break;
-
-            // 1NNN: jump (set pc = NNN)
-            case 0x1:
-                pc = NNN;
-                break;
-
-            // 2NNN: call (push pc to stack and set pc = NNN)
-            case 0x2:
-                push(&stack, pc);
-                pc = NNN;
-                break;
-
-            // 3XNN: skip conditionally (if Vx == NN, skip)
-            case 0x3:
-                if (registers[x] == NN)
-                {
-                    pc += 2;
-                }
-                break;
-
-            // 4XNN: skip conditionally (if Vx != NN, skip)
-            case 0x4:
-                if (registers[x] != NN)
-                {
-                    pc += 2;
-                }
-                break;
+        for (int instructions_read = 0; instructions_read < INSRUCTIONS_PER_SECOND; instructions_read++)
+        {
+            // Fetch
+            uint16_t instruction_1 = memory[pc] << 8;
+            uint16_t instruction_2 = memory[pc + 1];
+            uint16_t opcode = instruction_1 | instruction_2;
+            pc += 2;
             
-            // 5XY0 skip conditionally (if nibble_1 == x, skip)
-            case 0x5:
-                if (nibble_1 == x)
-                {
-                    pc += 2;
-                }
-                break;
+            i++;
 
-            // 6XNN: set (register VX to NN)
-            case 0x6:
-                registers[x] = NN;
-                break;
+            // Decode
 
-            // 7XNN: add (add NN to VX)
-            case 0x7:
-                registers[x] += NN;
-                break;
+            // Opcode is made up of 4 nibbles (each 4 bits), so we use masking and shifting to get each nibble
 
-            case 0x8:
-                // decide instruction based on final nibble
-                switch(nibble_4){
-                    // 8XY0: set
-                    case 0x0:
-                        registers[x] = registers[y];
-                        break;
-                    
-                    // 8XY1: binary OR
-                    case 0x1:
-                        registers[x] = (registers[x] | registers[y]);
-                        break;
-                    
-                    // 8XY2: binary AND
-                    case 0x2:
-                        registers[x] = (registers[x] & registers[y]);
-                        break;
+            uint8_t mask = 0xF; // 4 rightmost bits (1111 in binary)
+            uint8_t nibble_1 = (opcode >> 12) & mask; // find the kind of instruction
+            uint8_t nibble_2 = (opcode >> 8) & mask; // VX register
+            uint8_t nibble_3 = (opcode >> 4) & mask; // VY register
+            uint8_t nibble_4 = opcode & mask;
+            uint8_t N = nibble_4;
+            uint8_t NN = opcode & 0x00FF;
+            uint16_t NNN = opcode & 0x0FFF;
 
-                    // 8XY3: logical XOR
-                    case 0x3:
-                        registers[x] = registers[x] & registers[y];
-                        break;
+            uint8_t x = nibble_2;
+            uint8_t y = nibble_3;
 
-                    // 8XY4: add
-                    case 0x4:
-                        // If overflows: V_x + V_y > 255
-                        if (registers[x] > 255 - registers[y])
-                        {
-                            registers[0xF] = 1;
-                        }
-                        else
-                        {
-                            registers[0xF] = 0;
-                        }
-                        registers[x] += registers[y];
-                        break;
+            // Execute
 
-                    // 8XY5: subtract
-                    case 0x5:
-                        registers[x] -= registers[y]; 
-                        break;
-                    
-                    // 8XY6 and 8XYE: shift (ambigious instruction)
-                    case 0x6:{
-                        registers[x] = registers[y]; // Optional
-                        uint8_t shifted_out = (registers[x] & 1);
-                        registers[x] = registers[x] >> 1;
+            // Keyboard input
+            uint8_t curr_key = chip_8_to_keyboard(registers[nibble_2]);
+            const bool *keys = SDL_GetKeyboardState(NULL);
+            SDL_Scancode scancode = SDL_GetScancodeFromKey(curr_key, NULL);
 
-                        if (shifted_out == 1)
-                        {
-                            registers[0xF] = 1;
-                        }
-                        else
-                        {
-                            registers[0xF] = 0;
-                        }
-                        break;
-                    }
+            // Type of instruction
+            switch (nibble_1){
+                case 0x0:
+                    switch(nibble_4){
+                        // 00E0: clear screen
+                        case 0x0:
+                            clear_pixels(pixels);
+                            break;
 
-                    // 8XY7: subtract
-                    case 0x7:
-                        registers[x] = registers[y] - registers[x];
-                        break;
-
-                    // 8XYE: shift
-                    case 0xE: {
-                        registers[x] = registers[y]; // Optional (ambigious instruction)
-                        uint8_t shifted_out = (registers[x] & 1);
-                        registers[x] = registers[x] << 1;
-
-                        if (shifted_out == 1)
-                        {
-                            registers[0xF] = 1;
-                        }
-                        else
-                        {
-                            registers[0xF] = 0;
-                        }
-                        break;
+                        // 00EE: returning from subroutine
+                        case 0xE:
+                            // Remove last address from stack, set PC to it
+                            pc = pop(&stack);
+                            break;
                     }
                     break;
-                }
-            // 9XY0: skip conditionally
-            case 0x9:
-                if (nibble_1 != x)
-                {
-                    pc += 2;
-                }
-                break;
-            
-            // ANNN: set index
-            case 0xA:
-                index_register = NNN;
-                break;
 
-            // BNNN: jump with offset (ambiguous)
-            case 0xB:
-                pc += (NNN + registers[0x0]);
-                break;
+                // 1NNN: jump (set pc = NNN)
+                case 0x1:
+                    pc = NNN;
+                    break;
 
-            // CXNN: random
-            case 0xC:
-                registers[x] = rand() & NN;
-                break;
-            
-            // DXYN: display
-            case 0xD:{
-                uint8_t x_start = registers[x] % WIDTH;
-                uint8_t y_coord = registers[y] % HEIGHT;
-                registers[0XF] = 0;
+                // 2NNN: call (push pc to stack and set pc = NNN)
+                case 0x2:
+                    push(&stack, pc);
+                    pc = NNN;
+                    break;
 
-                for (int row = 0; row < N; row++)
-                {
-                    if (y_coord >= HEIGHT || y_coord < 0)
+                // 3XNN: skip conditionally (if Vx == NN, skip)
+                case 0x3:
+                    if (registers[x] == NN)
                     {
-                        break;
+                        pc += 2;
                     }
-                    uint8_t x_coord = x_start;
-                    uint8_t sprite = sprite_arr[index_register + row];
-                    uint8_t x_max = x_coord + 8;
+                    break;
 
-                    for (int i = 7; i >= 0; i--)
+                // 4XNN: skip conditionally (if Vx != NN, skip)
+                case 0x4:
+                    if (registers[x] != NN)
                     {
-                        uint8_t sprite_pixel = (sprite >> i) & 0x1;
-                        uint8_t screen_pixel = pixels[x_coord][y_coord];
+                        pc += 2;
+                    }
+                    break;
+                
+                // 5XY0 skip conditionally (if nibble_1 == x, skip)
+                case 0x5:
+                    if (nibble_1 == x)
+                    {
+                        pc += 2;
+                    }
+                    break;
 
-                        if (x_coord >= WIDTH || x_coord < 0)
-                        {
+                // 6XNN: set (register VX to NN)
+                case 0x6:
+                    registers[x] = NN;
+                    break;
+
+                // 7XNN: add (add NN to VX)
+                case 0x7:
+                    registers[x] += NN;
+                    break;
+
+                case 0x8:
+                    // decide instruction based on final nibble
+                    switch(nibble_4){
+                        // 8XY0: set
+                        case 0x0:
+                            registers[x] = registers[y];
+                            break;
+                        
+                        // 8XY1: binary OR
+                        case 0x1:
+                            registers[x] = (registers[x] | registers[y]);
+                            break;
+                        
+                        // 8XY2: binary AND
+                        case 0x2:
+                            registers[x] = (registers[x] & registers[y]);
+                            break;
+
+                        // 8XY3: logical XOR
+                        case 0x3:
+                            registers[x] = registers[x] & registers[y];
+                            break;
+
+                        // 8XY4: add
+                        case 0x4:
+                            // If overflows: V_x + V_y > 255
+                            if (registers[x] > 255 - registers[y])
+                            {
+                                registers[0xF] = 1;
+                            }
+                            else
+                            {
+                                registers[0xF] = 0;
+                            }
+                            registers[x] += registers[y];
+                            break;
+
+                        // 8XY5: subtract
+                        case 0x5:
+                            registers[x] -= registers[y]; 
+                            break;
+                        
+                        // 8XY6 and 8XYE: shift (ambigious instruction)
+                        case 0x6:{
+                            registers[x] = registers[y]; // Optional
+                            uint8_t shifted_out = (registers[x] & 1);
+                            registers[x] = registers[x] >> 1;
+
+                            if (shifted_out == 1)
+                            {
+                                registers[0xF] = 1;
+                            }
+                            else
+                            {
+                                registers[0xF] = 0;
+                            }
                             break;
                         }
 
-                        if (sprite_pixel == 1 && screen_pixel == 1)
-                        {
-                            pixels[x_coord][y_coord] = 0;
-                            registers[0xF] = 1;
+                        // 8XY7: subtract
+                        case 0x7:
+                            registers[x] = registers[y] - registers[x];
+                            break;
+
+                        // 8XYE: shift
+                        case 0xE: {
+                            registers[x] = registers[y]; // Optional (ambigious instruction)
+                            uint8_t shifted_out = (registers[x] & 1);
+                            registers[x] = registers[x] << 1;
+
+                            if (shifted_out == 1)
+                            {
+                                registers[0xF] = 1;
+                            }
+                            else
+                            {
+                                registers[0xF] = 0;
+                            }
+                            break;
                         }
-                        else if (sprite_pixel == 1 && screen_pixel == 0)
-                        {
-                            pixels[x_coord][y_coord] = 1;
-                        }
-                        
-                        x_coord += 1;
+                        break;
                     }
-                    y_coord += 1;
-                }
-                break;
-            } 
+                // 9XY0: skip conditionally
+                case 0x9:
+                    if (nibble_1 != x)
+                    {
+                        pc += 2;
+                    }
+                    break;
+                
+                // ANNN: set index
+                case 0xA:
+                    index_register = NNN;
+                    break;
 
-            case 0xE:
-                switch(nibble_4){
-                    // EX9E: skip if key
-                    case 0xE:
-                        if (keys[scancode])
+                // BNNN: jump with offset (ambiguous)
+                case 0xB:
+                    pc += (NNN + registers[0x0]);
+                    break;
+
+                // CXNN: random
+                case 0xC:
+                    registers[x] = rand() & NN;
+                    break;
+                
+                // DXYN: display
+                case 0xD:{
+                    uint8_t x_start = registers[x] % WIDTH;
+                    uint8_t y_coord = registers[y] % HEIGHT;
+                    registers[0XF] = 0;
+
+                    for (int row = 0; row < N; row++)
+                    {
+                        if (y_coord >= HEIGHT || y_coord < 0)
                         {
-                            pc += 2;
+                            break;
                         }
-                        break;
-                        
-                    // EXA1: skip if key
-                    case 0x1:
-                        if (!(keys[scancode]))
+                        uint8_t x_coord = x_start;
+                        uint8_t sprite = memory[index_register + row];
+                        // printNum(index_register);
+                        //printNum(sprite);
+                        uint8_t x_max = x_coord + 8;
+
+                        for (int i = 7; i >= 0; i--)
                         {
-                            pc += 2;
-                        }
-                        break;
-                }
-                break;
+                            uint8_t sprite_pixel = (sprite >> i) & 0x1;
+                            uint8_t screen_pixel = pixels[x_coord][y_coord];
 
-            case 0xF:
-                switch(nibble_4){
-                    // FX07: timer
-                    case 0x7:
-                        registers[x] = delay_timer;
-                        break;
-
-                    case 0x5:
-                        switch(nibble_3){
-                            // FX15: timer
-                            case 0x1:
-                                delay_timer = registers[x];
+                            if (x_coord >= WIDTH || x_coord < 0)
+                            {
                                 break;
+                            }
+
+                            if (sprite_pixel == 1 && screen_pixel == 1)
+                            {
+                                pixels[x_coord][y_coord] = 0;
+                                registers[0xF] = 1;
+                            }
+                            else if (sprite_pixel == 1 && screen_pixel == 0)
+                            {
+                                pixels[x_coord][y_coord] = 1;
+                            }
                             
-                            // FX55: store memory
-                            case 0x5:
-                                for (int i = 0; i <= x; i++)
-                                {
-                                    memory[index_register + i] = registers[i];
-                                }
-                                break;
-
-                            // FX65: load memory (opposite of FX55)
-                            case 0x6:
-                                for (int i = 0; i <= x; i++)
-                                {
-                                    registers[i] = memory[index_register + i];
-                                }
-                                break;
+                            x_coord += 1;
                         }
-                        break;
-                    
-                    // FX18: timer
-                    case 0x8:
-                        sound_timer = registers[x];
-                        break;
+                        y_coord += 1;
+                    }
+                    break;
+                } 
 
-                    // FX1E: add to index
-                    case 0xE:
-                        index_register += registers[x];
-                        if (index_register > 0x0FFF)
-                        {
-                            registers[0xF] = 1;
+                case 0xE:
+                    switch(nibble_4){
+                        // EX9E: skip if key
+                        case 0xE:
+                            if (keys[scancode])
+                            {
+                                pc += 2;
+                            }
+                            break;
+                            
+                        // EXA1: skip if key
+                        case 0x1:
+                            if (!(keys[scancode]))
+                            {
+                                pc += 2;
+                            }
+                            break;
+                    }
+                    break;
+
+                case 0xF:
+                    switch(nibble_4){
+                        // FX07: timer
+                        case 0x7:
+                            registers[x] = delay_timer;
+                            break;
+
+                        case 0x5:
+                            switch(nibble_3){
+                                // FX15: timer
+                                case 0x1:
+                                    delay_timer = registers[x];
+                                    break;
+                                
+                                // FX55: store memory
+                                case 0x5:
+                                    for (int i = 0; i <= x; i++)
+                                    {
+                                        memory[index_register + i] = registers[i];
+                                    }
+                                    break;
+
+                                // FX65: load memory (opposite of FX55)
+                                case 0x6:
+                                    for (int i = 0; i <= x; i++)
+                                    {
+                                        registers[i] = memory[index_register + i];
+                                    }
+                                    break;
+                            }
+                            break;
+                        
+                        // FX18: timer
+                        case 0x8:
+                            sound_timer = registers[x];
+                            break;
+
+                        // FX1E: add to index
+                        case 0xE:
+                            index_register += registers[x];
+                            if (index_register > 0x0FFF)
+                            {
+                                registers[0xF] = 1;
+                            }
+                            break;
+
+                        // FX0A: get key (stops execution, waiting for key input)
+                        case 0xA:
+                            if (key_released)
+                            {
+                                registers[x] = keyboard_to_chip_8(curr_key);
+                            }
+                            else
+                            {
+                                pc -= 2;
+                            }
+                            break;
+
+                        // FX29: font character
+                        case 0x9:
+                            index_register = 0x50 + registers[x];
+                            break;
+
+                        // FX33: binary-coded decimal conversion
+                        case 0x3:{
+                            memory[index_register] =  (registers[x] / 100) % 10;
+                            memory[index_register + 1] = (registers[x] / 10) % 10;
+                            memory[index_register + 2] = registers[x] % 10;
+                            break;
                         }
-                        break;
-
-                    // FX0A: get key (stops execution, waiting for key input)
-                    case 0xA:
-                        if (key_released)
-                        {
-                            registers[x] = keyboard_to_chip_8(curr_key);
-                        }
-                        else
-                        {
-                            pc -= 2;
-                        }
-                        break;
-
-                    // FX29: font character
-                    case 0x9:
-                        index_register = 0x50 + registers[x];
-                        break;
-
-                    // FX33: binary-coded decimal conversion
-                    case 0x3:{
-                        memory[index_register] =  (registers[x] / 100) % 10;
-                        memory[index_register + 1] = (registers[x] / 10) % 10;
-                        memory[index_register + 2] = registers[x] % 10;
                         break;
                     }
                     break;
-                }
-                break;
             }
-            
+        }
+
         // Render pixels that are turned on
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
         for (int i = 0; i < WIDTH; i++)
@@ -500,8 +507,23 @@ int main(void)
             }
         }
 
+        if (i > 70 && i % 100 == 0)
+        {
+            SDL_Surface *ss_surface = SDL_RenderReadPixels(renderer, NULL);
+            if (ss_surface == NULL)
+            {
+                SDL_Log("Screenshot failed! Reason: %s\n", SDL_GetError());
+                
+            }
+            if (!IMG_SavePNG(ss_surface, "output.png"))
+            {
+                SDL_Log("Could not save screenshot! Reason: %s\n", SDL_GetError());
+            }
+            SDL_DestroySurface(ss_surface);
+        }
+
         SDL_RenderPresent(renderer);
-        
+
         // Measuring time of frame in order to manage FPS
         Uint64 frame_end = SDL_GetTicksNS();
         float elapsed = (frame_end - frame_start) / 1e6f; // Convert from NS to MS
