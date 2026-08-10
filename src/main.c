@@ -30,8 +30,9 @@ SDL_FRect rects_arr[WIDTH][HEIGHT];
 int main(void)
 {
     int i = 0;
+    
     // Open file (for loading ROM data into memory)
-    FILE *ROM_file = fopen("bc_test.ch8", "r");
+    FILE *ROM_file = fopen("test_opcode.ch8", "r");
     if (ROM_file == NULL)
     {
         printf("Could not open file (NULL).\n");
@@ -47,7 +48,7 @@ int main(void)
     {
 
         printf("File is too large (memory exceeded).\n");
-        return 2;
+        return 1;
     }
 
     // Read file into memory starting at index 0x200 (512 in decimal)
@@ -82,7 +83,7 @@ int main(void)
     }
 
     // Initialise SDL
-    if (!SDL_Init(SDL_INIT_VIDEO))
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
     {
         SDL_Log("Window initialisation failed! Reason: %s\n", SDL_GetError());
     }
@@ -107,6 +108,8 @@ int main(void)
     // Timers decremented once per frame (60 Hz)
     uint8_t delay_timer = 0;
     uint8_t sound_timer = 0;
+    int curr_sample = 0;
+    bool sound_timer_on = false;
 
     // Event loop
     const float target_frame_time = 1000.0f / 60.0f;  // 60 FPS, so 0.017 seconds per frame.
@@ -146,7 +149,42 @@ int main(void)
         if (sound_timer > 0)
         {
             sound_timer -= 1;
+
+            SDL_AudioSpec spec;
+
+            spec.channels = 1;
+            spec.format = SDL_AUDIO_F32;
+            spec.freq = 8000;
+
+            SDL_AudioStream *stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL);
+            if (!stream)
+            {
+                SDL_Log("Couldn't create audio stream. Reason: %s\n", SDL_GetError());
+            }
+            SDL_ResumeAudioStreamDevice(stream);  
+            
+            const int minimum_audio = (spec.freq * sizeof(float)) / 60;
+            float samples[512];
+            const int freq = 440;
+            while (SDL_GetAudioStreamQueued(stream) < minimum_audio)
+            {
+                for (int i = 0; i < SDL_arraysize(samples); i++)   
+                {
+                    int phase = (curr_sample * freq) / spec.freq;
+                    if (phase % 2 == 0)
+                    {
+                        samples[i] = 1;
+                    }
+                    else
+                    {
+                        samples[i] = -1;
+                    }
+                    curr_sample++;
+                }
+                SDL_PutAudioStreamData(stream, samples, sizeof(samples));
+            }
         }
+
         if (delay_timer > 0)
         {
             delay_timer -= 1;
@@ -217,7 +255,7 @@ int main(void)
                 case 0x3:
                     if (registers[x] == NN)
                     {
-                        pc += 2;
+                        pc += 2; 
                     }
                     break;
 
@@ -229,9 +267,9 @@ int main(void)
                     }
                     break;
                 
-                // 5XY0 skip conditionally (if nibble_1 == x, skip)
+                // 5XY0 skip conditionally (if VX = VY, skip)
                 case 0x5:
-                    if (nibble_1 == x)
+                    if (registers[x] == registers[y])
                     {
                         pc += 2;
                     }
@@ -331,7 +369,7 @@ int main(void)
                     }
                 // 9XY0: skip conditionally
                 case 0x9:
-                    if (nibble_1 != x)
+                    if (registers[x] != registers[y])
                     {
                         pc += 2;
                     }
@@ -366,8 +404,6 @@ int main(void)
                         }
                         uint8_t x_coord = x_start;
                         uint8_t sprite = memory[index_register + row];
-                        // printNum(index_register);
-                        //printNum(sprite);
                         uint8_t x_max = x_coord + 8;
 
                         for (int i = 7; i >= 0; i--)
@@ -513,7 +549,6 @@ int main(void)
             if (ss_surface == NULL)
             {
                 SDL_Log("Screenshot failed! Reason: %s\n", SDL_GetError());
-                
             }
             if (!IMG_SavePNG(ss_surface, "output.png"))
             {
