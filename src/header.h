@@ -28,6 +28,7 @@ typedef struct
 #define WIDTH 64
 #define HEIGHT 32
 #define SCALE 16
+#define INSRUCTIONS_PER_SECOND 10
 
 extern int chip_8_arr[16];
 extern char keyboard_arr[16];
@@ -40,7 +41,8 @@ int pop(Stack *stack);
 void clear_pixels(uint8_t pixels[WIDTH][HEIGHT]);
 int chip_8_to_keyboard(int chip_8);
 int keyboard_to_chip_8(int keyboard);
-SDL_FRect find_rect(int i, int j, int w, int h);
+SDL_FRect get_frect(int i, int j, int w, int h);
+SDL_Rect get_rect(int i, int j, int w, int h);
 void printNum(u_int16_t x);
 void print_pixels(uint8_t pixels[WIDTH][HEIGHT]);
 void pixels_on(uint8_t pixels[WIDTH][HEIGHT]);
