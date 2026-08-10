@@ -77,9 +77,19 @@ int keyboard_to_chip_8(int keyboard)
     return -1;
 }
 
-SDL_FRect find_rect(int i, int j, int w, int h)
+SDL_FRect get_frect(int i, int j, int w, int h)
 {
     SDL_FRect rect;
+    rect.x = i; 
+    rect.y = j;
+    rect.w = w;
+    rect.h = h;
+    return rect;
+}
+
+SDL_Rect get_rect(int i, int j, int w, int h)
+{
+    SDL_Rect rect;
     rect.x = i; 
     rect.y = j;
     rect.w = w;
