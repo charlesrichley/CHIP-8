@@ -30,7 +30,7 @@ SDL_FRect rects_arr[WIDTH][HEIGHT];
 int main(void)
 {
     int i = 0;
-    
+
     // Open file (for loading ROM data into memory)
     FILE *ROM_file = fopen("test_opcode.ch8", "r");
     if (ROM_file == NULL)
@@ -70,7 +70,7 @@ int main(void)
     {
         keypad[i].chip_8 = chip_8_arr[i];
         keypad[i].keyboard = keyboard_arr[i];
-        keypad[i].is_on = false;
+        keypad[i].is_pressed = false;
     }
 
     // Initialise rect array for rendering pixels
@@ -110,11 +110,12 @@ int main(void)
     uint8_t sound_timer = 0;
     int curr_sample = 0;
     bool sound_timer_on = false;
+    uint8_t keys_down[16];
+    (keys_down, keyboard_to_chip_8, sizeof(keyboard_to_chip_8))
 
     // Event loop
     const float target_frame_time = 1000.0f / 60.0f;  // 60 FPS, so 0.017 seconds per frame.
     bool quitting = false;
-    bool key_released = false;
     SDL_Event event;
     SDL_zero(event);
 
@@ -128,11 +129,23 @@ int main(void)
             switch(event.type){
                 case SDL_EVENT_QUIT:
                     quitting = true;
+                
+                case SDL_EVENT_KEY_DOWN:
+                    // Keyboard input
+                    uint8_t curr_key = chip_8_to_keyboard(registers[nibble_2]);
+                    SDL_Scancode event_scancode = event.key.scancode;
+                    SDL_Scancode key_scancode = SDL_GetScancodeFromKey(curr_key, NULL);
 
                 case SDL_EVENT_KEY_UP:
-                    key_released = true;
+                    key_up = true;
             }
         }
+
+        // Keyboard input for EX93 and EXA1 - 
+        // if key is CURRENTLY being held down, which is different to FX0A
+        uint8_t curr_key = chip_8_to_keyboard(registers[nibble_2]);
+        const bool *keyboard = SDL_GetKeyboardState(NULL);
+        SDL_Scancode scancode = SDL_GetScancodeFromKey(curr_key, NULL);
 
         // Reset pixels to black, which are later rendered based off pixels array
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
@@ -217,11 +230,6 @@ int main(void)
             uint8_t y = nibble_3;
 
             // Execute
-
-            // Keyboard input
-            uint8_t curr_key = chip_8_to_keyboard(registers[nibble_2]);
-            const bool *keys = SDL_GetKeyboardState(NULL);
-            SDL_Scancode scancode = SDL_GetScancodeFromKey(curr_key, NULL);
 
             // Type of instruction
             switch (nibble_1){
@@ -437,7 +445,7 @@ int main(void)
                     switch(nibble_4){
                         // EX9E: skip if key
                         case 0xE:
-                            if (keys[scancode])
+                            if (keyboard[scancode])
                             {
                                 pc += 2;
                             }
@@ -445,7 +453,7 @@ int main(void)
                             
                         // EXA1: skip if key
                         case 0x1:
-                            if (!(keys[scancode]))
+                            if (!(keyboard[scancode]))
                             {
                                 pc += 2;
                             }
