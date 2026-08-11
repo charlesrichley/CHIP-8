@@ -1,23 +1,5 @@
 #include "header.h"
 
-// Font characters are 4 pixels wide by 5 pixels tall
-uint8_t sprite_arr[80] = {0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
-0x20, 0x60, 0x20, 0x20, 0x70, // 1
-0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
-0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
-0x90, 0x90, 0xF0, 0x10, 0x10, // 4
-0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
-0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
-0xF0, 0x10, 0x20, 0x40, 0x40, // 7
-0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
-0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
-0xF0, 0x90, 0xF0, 0x90, 0x90, // A
-0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
-0xF0, 0x80, 0x80, 0x80, 0xF0, // C
-0xE0, 0x90, 0x90, 0x90, 0xE0, // D
-0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
-0xF0, 0x80, 0xF0, 0x80, 0x80}; // F
-
 // Memory is 4 kB (4096 bytes). 
 // Initial space can be left empty (except for fonts)
 uint8_t memory[4096];
@@ -32,7 +14,7 @@ int main(void)
     int i = 0;
 
     // Open file (for loading ROM data into memory)
-    FILE *ROM_file = fopen("test_opcode.ch8", "r");
+    FILE *ROM_file = fopen("snek.ch8", "r");
     if (ROM_file == NULL)
     {
         printf("Could not open file (NULL).\n");
@@ -70,8 +52,7 @@ int main(void)
     {
         keypad[i].chip_8 = chip_8_arr[i];
         keypad[i].keyboard = keyboard_arr[i];
-        keypad[i].is_pressed = false;
-        keypad[i].scancode  SDL_GetScancodeFromKey(keyboard);
+        keypad[i].scancode = SDL_GetScancodeFromKey(keyboard_arr[i], NULL);
     }
 
     // Initialise rect array for rendering pixels
@@ -110,10 +91,11 @@ int main(void)
     uint8_t delay_timer = 0;
     uint8_t sound_timer = 0;
     int curr_sample = 0;
-    bool sound_timer_on = false;
     uint8_t keys_down[16];
-    int fx0a_num_state;
-    const bool *fx0a_keyboard;
+    int fx0a_num_state = 0;
+    const bool *fx0a_keyboard = NULL;
+    bool fx0a_blocked = false;
+    int fx0a_chip_8_key;
 
     // Event loop
     const float target_frame_time = 1000.0f / 60.0f;  // 60 FPS, so 0.017 seconds per frame.
@@ -132,34 +114,25 @@ int main(void)
             switch(event.type){
                 case SDL_EVENT_QUIT:
                     quitting = true;
-                
-                case SDL_EVENT_KEY_DOWN:
-                    // Key pressed down
-                    for (int i = 0; i < 16; i++)
-                    {
-                        if (event_scancode == keypad[i].scancode)
-                        {
-                            keypad[i].is_pressed = true;
-                        }
-                    }
 
                 case SDL_EVENT_KEY_UP:
                     // Key released
-                    for (int i = 0; i < 16; i++)
+                    if (!fx0a_blocked)
                     {
-                        if (event_scancode == keypad[i].scancode)
+                        int scancode_index = get_scancode_index(keypad, event_scancode);
+                        if (scancode_index >= 0 && fx0a_keyboard != NULL)
                         {
-                            keypad[i].is_pressed = false;
+                            if (fx0a_keyboard[keypad[i].scancode])
+                            {
+                                fx0a_num_state = -1;
+                                fx0a_blocked = false;
+                                fx0a_chip_8_key = keypad[i].chip_8;
+                            }
                         }
                     }
+                    
             }
         }
-
-        // Keyboard input for EX93 and EXA1 - 
-        // if key is CURRENTLY being held down, which is different to FX0A
-        uint8_t curr_key = chip_8_to_keyboard(registers[x]);
-        const bool *keyboard = SDL_GetKeyboardState(NULL);
-        SDL_Scancode scancode = SDL_GetScancodeFromKey(curr_key, NULL);
 
         // Reset pixels to black, which are later rendered based off pixels array
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
@@ -219,14 +192,14 @@ int main(void)
 
         for (int instructions_read = 0; instructions_read < INSRUCTIONS_PER_SECOND; instructions_read++)
         {
+            i++;
+
             // Fetch
             uint16_t instruction_1 = memory[pc] << 8;
             uint16_t instruction_2 = memory[pc + 1];
             uint16_t opcode = instruction_1 | instruction_2;
             pc += 2;
             
-            i++;
-
             // Decode
 
             // Opcode is made up of 4 nibbles (each 4 bits), so we use masking and shifting to get each nibble
@@ -242,6 +215,16 @@ int main(void)
 
             uint8_t x = nibble_2;
             uint8_t y = nibble_3;
+
+            // Keyboard input for EX9E and EXA1 - 
+            // if key is CURRENTLY being held down, which is different to FX0A
+            int curr_key = chip_8_to_keyboard(registers[x]);
+            const bool *ex_keyboard = SDL_GetKeyboardState(NULL);
+            if (ex_keyboard == NULL)
+            {
+                SDL_Log("Keyboard is NULL. Reason: %s\n", SDL_GetError());
+            }
+            SDL_Scancode ex_scancode = SDL_GetScancodeFromKey(curr_key, NULL);
 
             // Execute
 
@@ -459,7 +442,7 @@ int main(void)
                     switch(nibble_4){
                         // EX9E: skip if key
                         case 0xE:
-                            if (keyboard[scancode])
+                            if (ex_keyboard[ex_scancode] && curr_key != -1)
                             {
                                 pc += 2;
                             }
@@ -467,7 +450,7 @@ int main(void)
                             
                         // EXA1: skip if key
                         case 0x1:
-                            if (!(keyboard[scancode]))
+                            if (!(ex_keyboard[ex_scancode]) && curr_key != -1)
                             {
                                 pc += 2;
                             }
@@ -523,16 +506,21 @@ int main(void)
 
                         // FX0A: get key (stops execution, waiting for key input)
                         case 0xA:
-                            if (fx0a_num_state == 0)
+                            // Initialise keyboard
+                            if (fx0a_blocked == true && fx0a_num_state == 0)
                             {
-                                fx0a_keyboard = = SDL_GetKeyboardState(NULL); 
-                                registers[x] = keyboard_to_chip_8(curr_key);
+                                fx0a_keyboard = SDL_GetKeyboardState(NULL); 
+                            }
+
+                            if (fx0a_blocked == true)
+                            {
+                                pc -= 2;
+                                fx0a_num_state++;
                             }
                             else
                             {
-                                pc -= 2;
+                                registers[x] = fx0a_chip_8_key;
                             }
-                            fx0a_state_num++;
                             break;
 
                         // FX29: font character
