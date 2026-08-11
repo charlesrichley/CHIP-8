@@ -22,6 +22,7 @@ typedef struct
     int chip_8;
     char keyboard;
     bool is_on;
+    SDL_Scancode scancode;
 
 } Keypad;
 
@@ -32,6 +33,7 @@ typedef struct
 
 extern int chip_8_arr[16];
 extern char keyboard_arr[16];
+extern uint8_t sprite_arr[80];
 
 void draw_byte(int x, int y, int scale, SDL_Renderer* renderer);
 bool is_empty(Stack *stack);
@@ -47,3 +49,4 @@ void printNum(u_int16_t x);
 void print_pixels(uint8_t pixels[WIDTH][HEIGHT]);
 void pixels_on(uint8_t pixels[WIDTH][HEIGHT]);
 void print_memory(uint8_t memory[4096]);
+int get_scancode_index(Keypad keypad[16], SDL_Scancode scancode);
