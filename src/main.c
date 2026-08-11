@@ -71,6 +71,7 @@ int main(void)
         keypad[i].chip_8 = chip_8_arr[i];
         keypad[i].keyboard = keyboard_arr[i];
         keypad[i].is_pressed = false;
+        keypad[i].scancode  SDL_GetScancodeFromKey(keyboard);
     }
 
     // Initialise rect array for rendering pixels
@@ -111,7 +112,8 @@ int main(void)
     int curr_sample = 0;
     bool sound_timer_on = false;
     uint8_t keys_down[16];
-    (keys_down, keyboard_to_chip_8, sizeof(keyboard_to_chip_8))
+    int fx0a_num_state;
+    const bool *fx0a_keyboard;
 
     // Event loop
     const float target_frame_time = 1000.0f / 60.0f;  // 60 FPS, so 0.017 seconds per frame.
@@ -126,24 +128,36 @@ int main(void)
 
         while (SDL_PollEvent(&event))
         {
+            SDL_Scancode event_scancode = event.key.scancode;
             switch(event.type){
                 case SDL_EVENT_QUIT:
                     quitting = true;
                 
                 case SDL_EVENT_KEY_DOWN:
-                    // Keyboard input
-                    uint8_t curr_key = chip_8_to_keyboard(registers[nibble_2]);
-                    SDL_Scancode event_scancode = event.key.scancode;
-                    SDL_Scancode key_scancode = SDL_GetScancodeFromKey(curr_key, NULL);
+                    // Key pressed down
+                    for (int i = 0; i < 16; i++)
+                    {
+                        if (event_scancode == keypad[i].scancode)
+                        {
+                            keypad[i].is_pressed = true;
+                        }
+                    }
 
                 case SDL_EVENT_KEY_UP:
-                    key_up = true;
+                    // Key released
+                    for (int i = 0; i < 16; i++)
+                    {
+                        if (event_scancode == keypad[i].scancode)
+                        {
+                            keypad[i].is_pressed = false;
+                        }
+                    }
             }
         }
 
         // Keyboard input for EX93 and EXA1 - 
         // if key is CURRENTLY being held down, which is different to FX0A
-        uint8_t curr_key = chip_8_to_keyboard(registers[nibble_2]);
+        uint8_t curr_key = chip_8_to_keyboard(registers[x]);
         const bool *keyboard = SDL_GetKeyboardState(NULL);
         SDL_Scancode scancode = SDL_GetScancodeFromKey(curr_key, NULL);
 
@@ -509,14 +523,16 @@ int main(void)
 
                         // FX0A: get key (stops execution, waiting for key input)
                         case 0xA:
-                            if (key_released)
+                            if (fx0a_num_state == 0)
                             {
+                                fx0a_keyboard = = SDL_GetKeyboardState(NULL); 
                                 registers[x] = keyboard_to_chip_8(curr_key);
                             }
                             else
                             {
                                 pc -= 2;
                             }
+                            fx0a_state_num++;
                             break;
 
                         // FX29: font character
