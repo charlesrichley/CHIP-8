@@ -20,7 +20,7 @@ int main(void)
     FILE *ROM_file = fopen(file_name, "r");
     if (ROM_file == NULL)
     {
-        printf("Could not open file (NULL).\n");
+        SDL_Log("Could not open file (NULL).\n");
         return 1;
     }
 
@@ -31,7 +31,7 @@ int main(void)
     // CHIP-8 program starting at 0x200 - ensure file doesn't exceed capacity
     if (size > (4096 - 0x200))
     {
-        printf("File is too large (memory exceeded).\n");
+        SDL_Log("File is too large (memory exceeded).\n");
         return 1;
     }
 
@@ -123,8 +123,10 @@ int main(void)
                     // Key released
                     if (fx0a_blocked)
                     {
+                        // Check that scancode is in the 16 allowed CHIP-8 array (characters 0 - F)
                         SDL_Scancode event_scancode = event.key.scancode;
                         int scancode_index = get_scancode_index(keypad, event_scancode);
+
                         if (scancode_index >= 0 && fx0a_keyboard != NULL)
                         {
                             SDL_Scancode keypad_scancode = keypad[scancode_index].scancode;
@@ -242,12 +244,17 @@ int main(void)
                     switch(nibble_4){
                         // 00E0: clear screen
                         case 0x0:
-                            clear_pixels(pixels);
+                            for (int i = 0; i < WIDTH; i++)
+                            {
+                                for (int j = 0; j < HEIGHT; j++)
+                                {
+                                    pixels[i][j] = 0;
+                                }
+                            }
                             break;
 
-                        // 00EE: returning from subroutine
+                        // 00EE: remove last address from stack and set pc to address
                         case 0xE:
-                            // Remove last address from stack, set PC to it
                             pc = pop(&stack);
                             break;
                     }
@@ -458,7 +465,7 @@ int main(void)
                             
                         // EXA1: skip if key
                         case 0x1:
-                            if (!(ex_keyboard[ex_scancode]) && curr_key != -1)
+                            if (!ex_keyboard[ex_scancode] && curr_key != -1)
                             {
                                 pc += 2;
                             }
