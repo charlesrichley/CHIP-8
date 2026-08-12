@@ -1,5 +1,7 @@
 #include "header.h"
 
+char *file_name = "5-quirks.ch8";
+
 // Memory is 4 kB (4096 bytes). 
 // Initial space can be left empty (except for fonts)
 uint8_t memory[4096];
@@ -14,7 +16,7 @@ int main(void)
     int i = 0;
 
     // Open file (for loading ROM data into memory)
-    FILE *ROM_file = fopen("snek.ch8", "r");
+    FILE *ROM_file = fopen(file_name, "r");
     if (ROM_file == NULL)
     {
         printf("Could not open file (NULL).\n");
@@ -96,6 +98,8 @@ int main(void)
     const bool *fx0a_keyboard = NULL;
     bool fx0a_blocked = false;
     int fx0a_chip_8_key;
+
+    memory[0x1FF] = 1;
 
     // Event loop
     const float target_frame_time = 1000.0f / 60.0f;  // 60 FPS, so 0.017 seconds per frame.
@@ -190,10 +194,8 @@ int main(void)
             delay_timer -= 1;
         }
 
-        for (int instructions_read = 0; instructions_read < INSRUCTIONS_PER_SECOND; instructions_read++)
+        for (int instructions_read = 0; instructions_read < INSRUCTIONS_PER_SECOND; instructions_read++, i++)
         {
-            i++;
-
             // Fetch
             uint16_t instruction_1 = memory[pc] << 8;
             uint16_t instruction_2 = memory[pc + 1];
@@ -300,12 +302,12 @@ int main(void)
                         
                         // 8XY1: binary OR
                         case 0x1:
-                            registers[x] = (registers[x] | registers[y]);
+                            registers[x] = registers[x] | registers[y];
                             break;
                         
                         // 8XY2: binary AND
                         case 0x2:
-                            registers[x] = (registers[x] & registers[y]);
+                            registers[x] = registers[x] & registers[y];
                             break;
 
                         // 8XY3: logical XOR
@@ -335,7 +337,7 @@ int main(void)
                         // 8XY6 and 8XYE: shift (ambigious instruction)
                         case 0x6:{
                             registers[x] = registers[y]; // Optional
-                            uint8_t shifted_out = (registers[x] & 1);
+                            uint8_t shifted_out = registers[x] & 1;
                             registers[x] = registers[x] >> 1;
 
                             if (shifted_out == 1)
