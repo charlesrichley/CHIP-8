@@ -55,6 +55,7 @@ int main(void)
         keypad[i].chip_8 = chip_8_arr[i];
         keypad[i].keyboard = keyboard_arr[i];
         keypad[i].scancode = scancode_arr[i];
+        keypad[i].is_down = false;
     }
 
     // Initialise rect array for rendering pixels
@@ -96,11 +97,9 @@ int main(void)
     int curr_sample = 0;
 
     // Managing keyboard input
-    const bool *fx0a_keyboard = NULL;
-    bool fx0a_blocked = false;
-    int fx0a_chip_8_key;
-    bool just_finished = false;
-    bool *keyboard_copy;
+    bool fx0a_waiting = false;
+    bool fx0a_completed = false;
+    uint8_t fx0a_hexadecimal;
 
     // Event loop
     const float target_frame_time = 1000.0f / 60.0f;  // 60 FPS, so 0.017 seconds per frame.
@@ -120,35 +119,33 @@ int main(void)
                     quitting = true;
                     break;
 
-                case SDL_EVENT_KEY_DOWN:
-                                        
-                    break;
-
-                case SDL_EVENT_KEY_UP:
-                    // Key released
-                    if (fx0a_blocked)
+                case (SDL_EVENT_KEY_DOWN): 
+                {
+                    SDL_Scancode event_scancode = event.key.scancode;
+                    int index_key_down = scancode_to_index(keypad, event_scancode);
+                    if (index_key_down != -1)
                     {
-                        printf("Fx0A was blocked\n");
-                        // Ensure that scancode is in allowed CHIP-8 array (characters 0 - F)
-                        SDL_Scancode event_scancode = event.key.scancode;
-                        int scancode_index = get_scancode_index(keypad, event_scancode);
+                        keypad[index_key_down].is_down = true;
+                    }
+                    break;
+                }
 
-                        if (scancode_index >= 0 && fx0a_keyboard != NULL)
+                case (SDL_EVENT_KEY_UP):
+                {
+                    SDL_Scancode event_scancode = event.key.scancode;
+                    int index_key_up = scancode_to_index(keypad, event_scancode);
+                    if (index_key_up != -1)
+                    {
+                        if (keypad[index_key_up].is_down == true)
                         {
-                            SDL_Scancode keypad_scancode = keypad[scancode_index].scancode;
-                            if (fx0a_keyboard[keypad_scancode])
-                            {
-                                fx0a_chip_8_key = keypad[scancode_index].chip_8;
-                                fx0a_blocked = false;
-                                just_finished = true;
-                            }
+                            keypad[index_key_up].is_down = false;
+                            fx0a_waiting = false;
+                            fx0a_completed = true;
+                            fx0a_hexadecimal = chip_8_arr[index_key_up];
                         }
                     }
-                    else
-                    {
-                        printf("Fx0A wasn't blocked\n");
-                    }
-                    break;    
+                    break; 
+                }  
             }
         }
 
@@ -236,22 +233,12 @@ int main(void)
             // Keyboard input for EX9E and EXA1 - 
             // if key is CURRENTLY being held down, which is different to FX0A
             int curr_key = chip_8_to_keyboard(registers[x]);
-            int keyboard_arr_length;
-            const bool *ex_keyboard = SDL_GetKeyboardState(&keyboard_arr_length);
+            const bool *ex_keyboard = SDL_GetKeyboardState(NULL);
             if (ex_keyboard == NULL)
             {
                 SDL_Log("Keyboard is NULL. Reason: %s\n", SDL_GetError());
             }
-
-            int keyboard_copy_size = sizeof(bool) * keyboard_arr_length;
-            keyboard_copy = malloc(keyboard_copy_size);
-            if (keyboard_copy == NULL)
-            {
-                SDL_Log("Error when allocating memory for the keyboard copy.\n");
-            }
-            memcpy(keyboard_copy, ex_keyboard, keyboard_copy_size);
-
-            SDL_Scancode ex_scancode = keypad[keyboard_to_index(registers[x])].scancode;
+            SDL_Scancode ex_scancode = keypad[keyboard_to_index(curr_key)].scancode;
 
             // Execute
 
@@ -428,7 +415,8 @@ int main(void)
                     break;
                 
                 // DXYN: display
-                case 0xD:{
+                case 0xD:
+                {
                     uint8_t x_start = registers[x] % WIDTH;
                     uint8_t y_coord = registers[y] % HEIGHT;
                     registers[0xF] = 0;
@@ -445,13 +433,13 @@ int main(void)
 
                         for (int i = 7; i >= 0; i--)
                         {
-                            uint8_t sprite_pixel = (sprite >> i) & 0x1;
-                            uint8_t screen_pixel = pixels[x_coord][y_coord];
-
                             if (x_coord >= WIDTH || x_coord < 0)
                             {
                                 break;
                             }
+
+                            uint8_t sprite_pixel = (sprite >> i) & 1;
+                            uint8_t screen_pixel = pixels[x_coord][y_coord];
 
                             if (sprite_pixel == 1 && screen_pixel == 1)
                             {
@@ -482,6 +470,7 @@ int main(void)
                             
                         // EXA1: skip if key
                         case 0x1:
+                            printf("EXA1 was called\n");
                             if (!ex_keyboard[ex_scancode] && curr_key != -1)
                             {
                                 pc += 2;
@@ -536,26 +525,22 @@ int main(void)
                             }
                             break;
 
-                        // FX0A: get key (stops execution, waiting for key input)
+                        // FX0A: get key (stops execution and waits for key input)
                         case 0xA:
-                            // printf("Blocked: %d\n", fx0a_blocked);
-                            // printf("Finished: %d\n", just_finished);
-                            if (fx0a_blocked == true)
+                            // Already been initialised and waiting for input
+                            if (fx0a_waiting && !fx0a_completed)
                             {
                                 pc -= 2;
                             }
-                            else if (fx0a_blocked == false && just_finished == true)
+                            // Key has been pressed down after waiting period
+                            else if (fx0a_completed && !fx0a_waiting)
                             {
-                                registers[x] = fx0a_chip_8_key;
-                                fx0a_blocked = false;
-                                just_finished = false;
-                                break;
+                                registers[x] = fx0a_hexadecimal;
                             }
-                            // Initialise keyboard
-                            else if (fx0a_blocked == false && just_finished == false)
+                            // Not been initalised
+                            else if (!fx0a_waiting && !fx0a_completed)
                             {
-                                fx0a_keyboard = SDL_GetKeyboardState(NULL);
-                                fx0a_blocked = true;
+                                fx0a_waiting = true;
                             }
                             break;
 
@@ -623,7 +608,6 @@ int main(void)
         window = NULL;
         renderer = NULL;
         SDL_Quit();
-        free(keyboard_copy);
     }
 
     return 0;
