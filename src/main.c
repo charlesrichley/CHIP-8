@@ -100,6 +100,7 @@ int main(void)
     bool fx0a_blocked = false;
     int fx0a_chip_8_key;
     bool just_finished = false;
+    bool *keyboard_copy;
 
     // Event loop
     const float target_frame_time = 1000.0f / 60.0f;  // 60 FPS, so 0.017 seconds per frame.
@@ -130,7 +131,7 @@ int main(void)
                         if (scancode_index >= 0 && fx0a_keyboard != NULL)
                         {
                             SDL_Scancode keypad_scancode = keypad[scancode_index].scancode;
-                            if (fx0a_keyboard[keypad_scancode])
+                            if (!fx0a_keyboard[keypad_scancode])
                             {
                                 fx0a_chip_8_key = keypad[scancode_index].chip_8;
                                 fx0a_blocked = false;
@@ -229,11 +230,21 @@ int main(void)
             // Keyboard input for EX9E and EXA1 - 
             // if key is CURRENTLY being held down, which is different to FX0A
             int curr_key = chip_8_to_keyboard(registers[x]);
-            const bool *ex_keyboard = SDL_GetKeyboardState(NULL);
+            int keyboard_arr_length;
+            const bool *ex_keyboard = SDL_GetKeyboardState(&keyboard_arr_length);
             if (ex_keyboard == NULL)
             {
                 SDL_Log("Keyboard is NULL. Reason: %s\n", SDL_GetError());
             }
+
+            int keyboard_copy_size = sizeof(bool) * keyboard_arr_length;
+            keyboard_copy = malloc(keyboard_copy_size);
+            if (keyboard_copy == NULL)
+            {
+                SDL_Log("Error when allocating memory for the keyboard copy.\n");
+            }
+            memcpy(keyboard_copy, ex_keyboard, keyboard_copy_size);
+
             SDL_Scancode ex_scancode = keypad[keyboard_to_index(registers[x])].scancode;
 
             // Execute
@@ -539,7 +550,6 @@ int main(void)
                                 fx0a_keyboard = SDL_GetKeyboardState(NULL);
                                 fx0a_blocked = true;
                             }
-
                             break;
 
                         // FX29: font character
@@ -606,6 +616,7 @@ int main(void)
         window = NULL;
         renderer = NULL;
         SDL_Quit();
+        free(keyboard_copy);
     }
 
     return 0;
