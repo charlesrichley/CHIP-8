@@ -94,12 +94,11 @@ int main(void)
     uint8_t sound_timer = 0;
     int curr_sample = 0;
     uint8_t keys_down[16];
-    int fx0a_num_state = 0;
     const bool *fx0a_keyboard = NULL;
     bool fx0a_blocked = false;
     int fx0a_chip_8_key;
 
-    memory[0x1FF] = 1;
+    // memory[0x1FF] = 1; 
 
     // Event loop
     const float target_frame_time = 1000.0f / 60.0f;  // 60 FPS, so 0.017 seconds per frame.
@@ -128,8 +127,6 @@ int main(void)
                         {
                             if (fx0a_keyboard[keypad[i].scancode])
                             {
-                                fx0a_num_state = -1;
-                                fx0a_blocked = false;
                                 fx0a_chip_8_key = keypad[i].chip_8;
                             }
                         }
@@ -509,19 +506,20 @@ int main(void)
                         // FX0A: get key (stops execution, waiting for key input)
                         case 0xA:
                             // Initialise keyboard
-                            if (fx0a_blocked == true && fx0a_num_state == 0)
+                            if (fx0a_blocked == false)
                             {
                                 fx0a_keyboard = SDL_GetKeyboardState(NULL); 
+                                fx0a_blocked = true;
                             }
 
                             if (fx0a_blocked == true)
                             {
                                 pc -= 2;
-                                fx0a_num_state++;
                             }
                             else
                             {
                                 registers[x] = fx0a_chip_8_key;
+                                fx0a_blocked = false;
                             }
                             break;
 
