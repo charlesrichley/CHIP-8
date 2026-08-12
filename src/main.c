@@ -1,6 +1,6 @@
 #include "header.h"
 
-char *file_name = "5-quirks.ch8";
+char *file_name = "snek.ch8";
 
 // Memory is 4 kB (4096 bytes). 
 // Initial space can be left empty (except for fonts)
@@ -14,6 +14,7 @@ SDL_FRect rects_arr[WIDTH][HEIGHT];
 int main(void)
 {
     int INDEX_SS = 0;
+    // memory[0x1FF] = 1; 
 
     // Open file (for loading ROM data into memory)
     FILE *ROM_file = fopen(file_name, "r");
@@ -24,13 +25,12 @@ int main(void)
     }
 
     // Determine size of file
-    // CHIP-8 program starting at 0x200 (512 in decimal)
     fseek(ROM_file, 0, SEEK_END);
     long size = ftell(ROM_file); // size of file in bytes
 
+    // CHIP-8 program starting at 0x200 - ensure file doesn't exceed capacity
     if (size > (4096 - 0x200))
     {
-
         printf("File is too large (memory exceeded).\n");
         return 1;
     }
@@ -54,7 +54,7 @@ int main(void)
     {
         keypad[i].chip_8 = chip_8_arr[i];
         keypad[i].keyboard = keyboard_arr[i];
-        keypad[i].scancode = SDL_GetScancodeFromKey(keyboard_arr[i], NULL);
+        keypad[i].scancode = scancode_arr[i];
     }
 
     // Initialise rect array for rendering pixels
@@ -86,6 +86,7 @@ int main(void)
     // Allow renderer to adjust to window size (adjusted by scale factor)
     SDL_SetRenderLogicalPresentation(renderer, WIDTH, HEIGHT, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
 
+    // Initialising program counter and index register
     uint16_t pc = 0x200;
     uint16_t index_register = 0;
 
@@ -93,13 +94,12 @@ int main(void)
     uint8_t delay_timer = 0;
     uint8_t sound_timer = 0;
     int curr_sample = 0;
-    uint8_t keys_down[16];
+
+    // Managing keyboard input
     const bool *fx0a_keyboard = NULL;
     bool fx0a_blocked = false;
     int fx0a_chip_8_key;
     bool just_finished = false;
-
-    // memory[0x1FF] = 1; 
 
     // Event loop
     const float target_frame_time = 1000.0f / 60.0f;  // 60 FPS, so 0.017 seconds per frame.
@@ -114,7 +114,6 @@ int main(void)
 
         while (SDL_PollEvent(&event))
         {
-            SDL_Scancode event_scancode = event.key.scancode;
             switch(event.type){
                 case SDL_EVENT_QUIT:
                     quitting = true;
@@ -124,16 +123,16 @@ int main(void)
                     // Key released
                     if (fx0a_blocked)
                     {
+                        SDL_Scancode event_scancode = event.key.scancode;
                         int scancode_index = get_scancode_index(keypad, event_scancode);
-                        // print_keypad(keypad);
                         if (scancode_index >= 0 && fx0a_keyboard != NULL)
                         {
-                            if (fx0a_keyboard[keypad[scancode_index].scancode])
+                            SDL_Scancode keypad_scancode = keypad[scancode_index].scancode;
+                            if (fx0a_keyboard[keypad_scancode])
                             {
                                 fx0a_chip_8_key = keypad[scancode_index].chip_8;
                                 fx0a_blocked = false;
                                 just_finished = true;
-                                printf("%d\n", fx0a_chip_8_key);
                             }
                         }
                     }
@@ -233,7 +232,7 @@ int main(void)
             {
                 SDL_Log("Keyboard is NULL. Reason: %s\n", SDL_GetError());
             }
-            SDL_Scancode ex_scancode = SDL_GetScancodeFromKey(curr_key, NULL);
+            SDL_Scancode ex_scancode = keypad[keyboard_to_index(registers[x])].scancode;
 
             // Execute
 
@@ -366,7 +365,7 @@ int main(void)
                         // 8XYE: shift
                         case 0xE: {
                             registers[x] = registers[y]; // Optional (ambigious instruction)
-                            uint8_t shifted_out = (registers[x] & 1);
+                            uint8_t shifted_out = registers[x] & 1;
                             registers[x] = registers[x] << 1;
 
                             if (shifted_out == 1)
@@ -408,7 +407,7 @@ int main(void)
                 case 0xD:{
                     uint8_t x_start = registers[x] % WIDTH;
                     uint8_t y_coord = registers[y] % HEIGHT;
-                    registers[0XF] = 0;
+                    registers[0xF] = 0;
 
                     for (int row = 0; row < N; row++)
                     {
@@ -519,7 +518,7 @@ int main(void)
                             {
                                 pc -= 2;
                             }
-                            else if (fx0a_blocked == false && just_finished)
+                            else if (fx0a_blocked == false && just_finished == true)
                             {
                                 registers[x] = fx0a_chip_8_key;
                                 fx0a_blocked = false;
@@ -527,9 +526,9 @@ int main(void)
                                 break;
                             }
                             // Initialise keyboard
-                            else if (fx0a_blocked == false && !(just_finished))
+                            else if (fx0a_blocked == false && just_finished == false)
                             {
-                                fx0a_keyboard = SDL_GetKeyboardState(NULL); 
+                                fx0a_keyboard = SDL_GetKeyboardState(NULL);
                                 fx0a_blocked = true;
                             }
 
