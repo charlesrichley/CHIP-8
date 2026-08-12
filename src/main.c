@@ -117,21 +117,28 @@ int main(void)
             switch(event.type){
                 case SDL_EVENT_QUIT:
                     quitting = true;
+                    break;
 
                 case SDL_EVENT_KEY_UP:
                     // Key released
-                    if (!fx0a_blocked)
+                    if (fx0a_blocked)
                     {
                         int scancode_index = get_scancode_index(keypad, event_scancode);
+                        print_keypad(keypad);
                         if (scancode_index >= 0 && fx0a_keyboard != NULL)
                         {
-                            if (fx0a_keyboard[keypad[i].scancode])
+                            if (fx0a_keyboard[keypad[scancode_index].scancode])
                             {
-                                fx0a_chip_8_key = keypad[i].chip_8;
+                                fx0a_chip_8_key = keypad[scancode_index].chip_8;
+                                fx0a_blocked = false;
+                                printf("%d\n", fx0a_chip_8_key);
                             }
                         }
                     }
-                    
+                    else{
+                        printf("Why u here\n");
+                    }
+                    break;    
             }
         }
 
@@ -505,13 +512,6 @@ int main(void)
 
                         // FX0A: get key (stops execution, waiting for key input)
                         case 0xA:
-                            // Initialise keyboard
-                            if (fx0a_blocked == false)
-                            {
-                                fx0a_keyboard = SDL_GetKeyboardState(NULL); 
-                                fx0a_blocked = true;
-                            }
-
                             if (fx0a_blocked == true)
                             {
                                 pc -= 2;
@@ -520,6 +520,14 @@ int main(void)
                             {
                                 registers[x] = fx0a_chip_8_key;
                                 fx0a_blocked = false;
+                                break;
+                            }
+
+                            // Initialise keyboard
+                            if (fx0a_blocked == false)
+                            {
+                                fx0a_keyboard = SDL_GetKeyboardState(NULL); 
+                                fx0a_blocked = true;
                             }
                             break;
 
