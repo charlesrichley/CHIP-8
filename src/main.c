@@ -514,6 +514,7 @@ int main(void)
 
                         // FX0A: get key (stops execution, waiting for key input)
                         case 0xA:
+                            printf("Here first!\n %d\n", fx0a_blocked);
                             if (fx0a_blocked == true)
                             {
                                 pc -= 2;
