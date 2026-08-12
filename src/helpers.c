@@ -1,7 +1,8 @@
 #include "header.h"
 
-int chip_8_arr[16] = {0x1, 0x2, 0x3, 0xC, 0x5, 0x5, 0x6, 0xD, 0x7, 0x8, 0x9, 0xE, 0xA, 0x0, 0xB, 0xF};
-char keyboard_arr[16] = {'1', '2', '3', '4', 'a', 'w', 'e', 'r', 'a', 's', 'd','f', 'z', 'x', 'c', 'v'};
+int chip_8_arr[16] = {0x1, 0x2, 0x3, 0xC, 0x4, 0x5, 0x6, 0xD, 0x7, 0x8, 0x9, 0xE, 0xA, 0x0, 0xB, 0xF};
+char keyboard_arr[16] = {'1', '2', '3', '4', 'q', 'w', 'e', 'r', 'a', 's', 'd','f', 'z', 'x', 'c', 'v'};
+SDL_Scancode scancode_arr[16] = {SDL_SCANCODE_1, SDL_SCANCODE_2, SDL_SCANCODE_3, SDL_SCANCODE_4, SDL_SCANCODE_Q, SDL_SCANCODE_W, SDL_SCANCODE_E, SDL_SCANCODE_R, SDL_SCANCODE_A, SDL_SCANCODE_S, SDL_SCANCODE_D, SDL_SCANCODE_F, SDL_SCANCODE_Z, SDL_SCANCODE_X, SDL_SCANCODE_C, SDL_SCANCODE_V};
 
 // Font characters are 4 pixels wide by 5 pixels tall
 uint8_t sprite_arr[80] = {0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -58,17 +59,6 @@ int pop(Stack *stack)
     int popped_number = stack->arr[stack->top];
     stack->top -= 1;
     return popped_number;
-}
-
-void clear_pixels(uint8_t pixels[WIDTH][HEIGHT])
-{
-    for (int i = 0; i < WIDTH; i++)
-    {
-        for (int j = 0; j < HEIGHT; j++)
-        {
-            pixels[i][j] = 0;
-        }
-    }
 }
 
 int chip_8_to_keyboard(int chip_8)
@@ -152,7 +142,7 @@ void print_memory(uint8_t memory[4096])
     printf("\n");
 }
 
-int get_scancode_index(Keypad keypad[16], SDL_Scancode scancode)
+int scancode_to_index(Keypad keypad[16], SDL_Scancode scancode)
 {
     for (int i = 0; i < 16; i++)
     {
@@ -183,4 +173,16 @@ void print_chip_8_arr(int chip_8_arr[16])
         printf("%d\n", chip_8_arr[i]);
     }
     printf("\n");
+}
+
+int keyboard_to_index(char c)
+{
+    for (int i = 0; i < 16; i++)
+    {
+        if (keyboard_arr[i] == c)
+        {
+            return i;
+        }
+    }
+    return -1;
 }
