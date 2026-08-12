@@ -1,7 +1,7 @@
 #include "header.h"
 
-int chip_8_arr[16] = {0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF};
-char keyboard_arr[16] = {'1', '2', '3', '4', 'Q', 'W', 'E', 'R', 'A', 'S', 'D','F', 'Z', 'X', 'C', 'V'};
+int chip_8_arr[16] = {0x1, 0x2, 0x3, 0xC, 0x5, 0x5, 0x6, 0xD, 0x7, 0x8, 0x9, 0xE, 0xA, 0x0, 0xB, 0xF};
+char keyboard_arr[16] = {'1', '2', '3', '4', 'a', 'w', 'e', 'r', 'a', 's', 'd','f', 'z', 'x', 'c', 'v'};
 
 // Font characters are 4 pixels wide by 5 pixels tall
 uint8_t sprite_arr[80] = {0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -162,4 +162,25 @@ int get_scancode_index(Keypad keypad[16], SDL_Scancode scancode)
         }
     }
     return -1;
+}
+
+void print_keypad(Keypad keypad[16])
+{
+    for (int i = 0; i < 16; i++)
+    {
+        printf("chip_8: %d\n", keypad[i].chip_8);
+        printf("keyboard: %c\n", keypad[i].keyboard);
+        printf("SDL_scancode: %d\n", keypad[i].scancode);
+        printf("\n");
+    }
+    printf("\n");
+}
+
+void print_chip_8_arr(int chip_8_arr[16])
+{
+    for (int i = 0; i < 16; i++)
+    {
+        printf("%d\n", chip_8_arr[i]);
+    }
+    printf("\n");
 }
