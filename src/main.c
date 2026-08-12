@@ -120,18 +120,23 @@ int main(void)
                     quitting = true;
                     break;
 
+                case SDL_EVENT_KEY_DOWN:
+                                        
+                    break;
+
                 case SDL_EVENT_KEY_UP:
                     // Key released
                     if (fx0a_blocked)
                     {
-                        // Check that scancode is in the 16 allowed CHIP-8 array (characters 0 - F)
+                        printf("Fx0A was blocked\n");
+                        // Ensure that scancode is in allowed CHIP-8 array (characters 0 - F)
                         SDL_Scancode event_scancode = event.key.scancode;
                         int scancode_index = get_scancode_index(keypad, event_scancode);
 
                         if (scancode_index >= 0 && fx0a_keyboard != NULL)
                         {
                             SDL_Scancode keypad_scancode = keypad[scancode_index].scancode;
-                            if (!fx0a_keyboard[keypad_scancode])
+                            if (fx0a_keyboard[keypad_scancode])
                             {
                                 fx0a_chip_8_key = keypad[scancode_index].chip_8;
                                 fx0a_blocked = false;
@@ -141,7 +146,7 @@ int main(void)
                     }
                     else
                     {
-                        printf("Fx0a wasn't blocked\n");
+                        printf("Fx0A wasn't blocked\n");
                     }
                     break;    
             }
@@ -158,7 +163,7 @@ int main(void)
             }
         }
 
-        // Update timers
+        // Update sound timer
         if (sound_timer > 0)
         {
             sound_timer -= 1;
@@ -198,6 +203,7 @@ int main(void)
             }
         }
 
+        // Update delay timer
         if (delay_timer > 0)
         {
             delay_timer -= 1;
@@ -532,7 +538,8 @@ int main(void)
 
                         // FX0A: get key (stops execution, waiting for key input)
                         case 0xA:
-                            printf("Here first!\n %d\n", fx0a_blocked);
+                            // printf("Blocked: %d\n", fx0a_blocked);
+                            // printf("Finished: %d\n", just_finished);
                             if (fx0a_blocked == true)
                             {
                                 pc -= 2;
