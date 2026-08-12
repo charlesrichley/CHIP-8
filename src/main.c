@@ -13,7 +13,7 @@ SDL_FRect rects_arr[WIDTH][HEIGHT];
 
 int main(void)
 {
-    int i = 0;
+    int INDEX_SS = 0;
 
     // Open file (for loading ROM data into memory)
     FILE *ROM_file = fopen(file_name, "r");
@@ -97,6 +97,7 @@ int main(void)
     const bool *fx0a_keyboard = NULL;
     bool fx0a_blocked = false;
     int fx0a_chip_8_key;
+    bool just_finished = false;
 
     // memory[0x1FF] = 1; 
 
@@ -124,19 +125,21 @@ int main(void)
                     if (fx0a_blocked)
                     {
                         int scancode_index = get_scancode_index(keypad, event_scancode);
-                        print_keypad(keypad);
+                        // print_keypad(keypad);
                         if (scancode_index >= 0 && fx0a_keyboard != NULL)
                         {
                             if (fx0a_keyboard[keypad[scancode_index].scancode])
                             {
                                 fx0a_chip_8_key = keypad[scancode_index].chip_8;
                                 fx0a_blocked = false;
+                                just_finished = true;
                                 printf("%d\n", fx0a_chip_8_key);
                             }
                         }
                     }
-                    else{
-                        printf("Why u here\n");
+                    else
+                    {
+                        printf("Fx0a wasn't blocked\n");
                     }
                     break;    
             }
@@ -198,7 +201,7 @@ int main(void)
             delay_timer -= 1;
         }
 
-        for (int instructions_read = 0; instructions_read < INSRUCTIONS_PER_SECOND; instructions_read++, i++)
+        for (int instructions_read = 0; instructions_read < INSRUCTIONS_PER_SECOND; instructions_read++, INDEX_SS++)
         {
             // Fetch
             uint16_t instruction_1 = memory[pc] << 8;
@@ -516,19 +519,20 @@ int main(void)
                             {
                                 pc -= 2;
                             }
-                            else
+                            else if (fx0a_blocked == false && just_finished)
                             {
                                 registers[x] = fx0a_chip_8_key;
                                 fx0a_blocked = false;
+                                just_finished = false;
                                 break;
                             }
-
                             // Initialise keyboard
-                            if (fx0a_blocked == false)
+                            else if (fx0a_blocked == false && !(just_finished))
                             {
                                 fx0a_keyboard = SDL_GetKeyboardState(NULL); 
                                 fx0a_blocked = true;
                             }
+
                             break;
 
                         // FX29: font character
@@ -563,7 +567,7 @@ int main(void)
             }
         }
 
-        if (i > 70 && i % 100 == 0)
+        if (INDEX_SS > 70 && INDEX_SS % 100 == 0)
         {
             SDL_Surface *ss_surface = SDL_RenderReadPixels(renderer, NULL);
             if (ss_surface == NULL)
@@ -579,7 +583,7 @@ int main(void)
 
         SDL_RenderPresent(renderer);
 
-        // Measuring time of frame in order to manage FPS
+        // Measuring time of frame for managing FPS
         Uint64 frame_end = SDL_GetTicksNS();
         float elapsed = (frame_end - frame_start) / 1e6f; // Convert from NS to MS
         if (target_frame_time > elapsed)
