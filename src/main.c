@@ -1,6 +1,6 @@
 #include "header.h"
 
-char *file_name = "snek.ch8";
+char *file_name = "6-keypad.ch8";
 
 // Memory is 4 kB (4096 bytes). 
 // Initial space can be left empty (except for fonts)
@@ -14,7 +14,7 @@ SDL_FRect rects_arr[WIDTH][HEIGHT];
 int main(void)
 {
     int INDEX_SS = 0;
-    // memory[0x1FF] = 1; 
+    memory[0x1FF] = 3; 
 
     // Open file (for loading ROM data into memory)
     FILE *ROM_file = fopen(file_name, "r");
@@ -119,29 +119,35 @@ int main(void)
                     quitting = true;
                     break;
 
-                case (SDL_EVENT_KEY_DOWN): 
+                case SDL_EVENT_KEY_DOWN: 
                 {
-                    SDL_Scancode event_scancode = event.key.scancode;
-                    int index_key_down = scancode_to_index(keypad, event_scancode);
-                    if (index_key_down != -1)
+                    if (fx0a_waiting)
                     {
-                        keypad[index_key_down].is_down = true;
+                        SDL_Scancode event_scancode = event.key.scancode;
+                        int index_key_down = scancode_to_index(keypad, event_scancode);
+                        if (index_key_down != -1)
+                        {
+                            keypad[index_key_down].is_down = true;
+                        }
                     }
                     break;
                 }
 
-                case (SDL_EVENT_KEY_UP):
+                case SDL_EVENT_KEY_UP:
                 {
-                    SDL_Scancode event_scancode = event.key.scancode;
-                    int index_key_up = scancode_to_index(keypad, event_scancode);
-                    if (index_key_up != -1)
+                    if (fx0a_waiting)
                     {
-                        if (keypad[index_key_up].is_down == true)
+                        SDL_Scancode event_scancode = event.key.scancode;
+                        int index_key_up = scancode_to_index(keypad, event_scancode);
+                        if (index_key_up != -1)
                         {
-                            keypad[index_key_up].is_down = false;
-                            fx0a_waiting = false;
-                            fx0a_completed = true;
-                            fx0a_hexadecimal = chip_8_arr[index_key_up];
+                            if (keypad[index_key_up].is_down == true)
+                            {
+                                keypad[index_key_up].is_down = false;
+                                fx0a_completed = true;
+                                fx0a_waiting = false;
+                                fx0a_hexadecimal = chip_8_arr[index_key_up];
+                            }
                         }
                     }
                     break; 
@@ -470,7 +476,6 @@ int main(void)
                             
                         // EXA1: skip if key
                         case 0x1:
-                            printf("EXA1 was called\n");
                             if (!ex_keyboard[ex_scancode] && curr_key != -1)
                             {
                                 pc += 2;
@@ -536,6 +541,7 @@ int main(void)
                             else if (fx0a_completed && !fx0a_waiting)
                             {
                                 registers[x] = fx0a_hexadecimal;
+                                fx0a_completed = false;
                             }
                             // Not been initalised
                             else if (!fx0a_waiting && !fx0a_completed)
