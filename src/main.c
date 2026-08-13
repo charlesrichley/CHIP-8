@@ -1,6 +1,6 @@
 #include "header.h"
 
-char *file_name = "6-keypad.ch8";
+char *file_name = "4-flags+.ch8";
 
 // Memory is 4 kB (4096 bytes). 
 // Initial space can be left empty (except for fonts)
@@ -14,7 +14,7 @@ SDL_FRect rects_arr[WIDTH][HEIGHT];
 int main(void)
 {
     int INDEX_SS = 0;
-    memory[0x1FF] = 3; 
+    // memory[0x1FF] = 3; 
 
     // Open file (for loading ROM data into memory)
     FILE *ROM_file = fopen(file_name, "r");
@@ -165,6 +165,13 @@ int main(void)
                 SDL_RenderFillRect(renderer, &rect);
             }
         }
+        
+        // Ensure index registe does not overflow
+        if (index_register >= 4096)
+        {
+            SDL_Log("Index register has overflowed. \n");
+            return 1;
+        }
 
         // Update sound timer
         if (sound_timer > 0)
@@ -212,14 +219,13 @@ int main(void)
             delay_timer -= 1;
         }
 
-        for (int instructions_read = 0; instructions_read < INSRUCTIONS_PER_SECOND; instructions_read++, INDEX_SS++)
+        for (int instructions_read = 0; instructions_read < INSRUCTIONS_PER_FRAME; instructions_read++, INDEX_SS++)
         {
             // Fetch
             uint16_t instruction_1 = memory[pc] << 8;
             uint16_t instruction_2 = memory[pc + 1];
             uint16_t opcode = instruction_1 | instruction_2;
-            pc += 2;
-            
+            pc += 2;            
             // Decode
 
             // Opcode is made up of 4 nibbles (each 4 bits), so we use masking and shifting to get each nibble
@@ -340,8 +346,8 @@ int main(void)
 
                         // 8XY4: add
                         case 0x4:
-                            // If overflows: V_x + V_y > 255
-                            if (registers[x] > 255 - registers[y])
+                            // If overflows the 8 bits
+                            if (registers[x] + registers[y] < 255)
                             {
                                 registers[0xF] = 1;
                             }
@@ -354,16 +360,9 @@ int main(void)
 
                         // 8XY5: subtract
                         case 0x5:
-                            registers[x] -= registers[y]; 
-                            break;
-                        
-                        // 8XY6 and 8XYE: shift (ambigious instruction)
-                        case 0x6:{
-                            registers[x] = registers[y]; // Optional
-                            uint8_t shifted_out = registers[x] & 1;
-                            registers[x] = registers[x] >> 1;
-
-                            if (shifted_out == 1)
+                            // Affects the carry flag
+                            registers[x] = registers[x] - registers[y];
+                            if (registers[x] >= registers[y])
                             {
                                 registers[0xF] = 1;
                             }
@@ -372,18 +371,36 @@ int main(void)
                                 registers[0xF] = 0;
                             }
                             break;
+                        
+                        // 8XY6 and 8XYE: shift (ambigious instruction)
+                        case 0x6:{
+                            // registers[x] = registers[y]; // Optional
+                            uint8_t shifted_out = registers[x] & 1;
+                            registers[x] >>= 1;
+
+                            registers[0xF] = shifted_out;
+                            break;
                         }
 
                         // 8XY7: subtract
                         case 0x7:
+                            // Affects the carry flag
                             registers[x] = registers[y] - registers[x];
+                            if (registers[y] >= registers[x])
+                            {
+                                registers[0xF] = 1;
+                            }
+                            else
+                            {
+                                registers[0xF] = 0;
+                            }
                             break;
 
                         // 8XYE: shift
                         case 0xE: {
                             registers[x] = registers[y]; // Optional (ambigious instruction)
                             uint8_t shifted_out = registers[x] & 1;
-                            registers[x] = registers[x] << 1;
+                            registers[x] <<= 1;
 
                             if (shifted_out == 1)
                             {
@@ -413,6 +430,9 @@ int main(void)
                 // BNNN: jump with offset (ambiguous)
                 case 0xB:
                     pc += (NNN + registers[0x0]);
+                    // CHIP-8 and SUPER-CHIP change to BXNN (could be accidentally)
+                    // Where pc jumps to XNN + registers[x]
+                    // pc += (((x << 8) | NN)) + registers[x]);
                     break;
 
                 // CXNN: random
@@ -420,7 +440,7 @@ int main(void)
                     registers[x] = rand() & NN;
                     break;
                 
-                // DXYN: display
+                // DXYN: display (drawing instruction)
                 case 0xD:
                 {
                     uint8_t x_start = registers[x] % WIDTH;
@@ -582,6 +602,7 @@ int main(void)
             }
         }
 
+        // Take screenshots for documentation
         if (INDEX_SS > 70 && INDEX_SS % 100 == 0)
         {
             SDL_Surface *ss_surface = SDL_RenderReadPixels(renderer, NULL);
