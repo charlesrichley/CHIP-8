@@ -1,6 +1,6 @@
 #include "header.h"
 
-char *file_name = "4-flags+.ch8";
+char *file_name = "4-flags.ch8";
 
 // Memory is 4 kB (4096 bytes). 
 // Initial space can be left empty (except for fonts)
@@ -321,8 +321,9 @@ int main(void)
                     registers[x] += NN;
                     break;
 
-                case 0x8:
-                    // decide instruction based on final nibble
+                case 0x8: {
+                    uint8_t orig_registers_x = registers[x];
+                    uint8_t orig_registers_y = registers[y];
                     switch(nibble_4){
                         // 8XY0: set
                         case 0x0:
@@ -331,7 +332,14 @@ int main(void)
                         
                         // 8XY1: binary OR
                         case 0x1:
-                            registers[x] = registers[x] | registers[y];
+                            printf("Original registers[0xF]: %d\n", registers[0xF]);
+                            printf("x: %d\ny: %d\n", x, y);
+                            printf("Registers[x]: %d\n", orig_registers_x);
+                            printf("Registers[y]: %d\n", orig_registers_y);
+                            registers[x] = orig_registers_x | orig_registers_y;
+                            printf("Registers[x] after OR operation: %d\n", registers[x]);
+                            // registers[0xF] = 0;
+                            printf("Registers[0xF] after being set: %d\n\n", registers[0xF]);
                             break;
                         
                         // 8XY2: binary AND
@@ -341,13 +349,13 @@ int main(void)
 
                         // 8XY3: logical XOR
                         case 0x3:
-                            registers[x] = registers[x] & registers[y];
+                            registers[x] = registers[x] ^ registers[y];
                             break;
 
                         // 8XY4: add
-                        case 0x4:
+                        case 0x4: {
                             // If overflows the 8 bits
-                            if (registers[x] + registers[y] < 255)
+                            if (orig_registers_x + orig_registers_y < 255)
                             {
                                 registers[0xF] = 1;
                             }
@@ -355,14 +363,16 @@ int main(void)
                             {
                                 registers[0xF] = 0;
                             }
-                            registers[x] += registers[y];
+                            registers[x] = orig_registers_x + orig_registers_y;
                             break;
+                        }
 
                         // 8XY5: subtract
-                        case 0x5:
+                        case 0x5: {
                             // Affects the carry flag
-                            registers[x] = registers[x] - registers[y];
-                            if (registers[x] >= registers[y])
+                            uint8_t orig_registers_x = registers[x];
+                            uint8_t orig_registers_y = registers[y];
+                            if (orig_registers_x >= orig_registers_y)
                             {
                                 registers[0xF] = 1;
                             }
@@ -370,14 +380,15 @@ int main(void)
                             {
                                 registers[0xF] = 0;
                             }
+                            registers[x] = orig_registers_x - orig_registers_y;
                             break;
+                        }
                         
                         // 8XY6 and 8XYE: shift (ambigious instruction)
                         case 0x6:{
                             // registers[x] = registers[y]; // Optional
                             uint8_t shifted_out = registers[x] & 1;
                             registers[x] >>= 1;
-
                             registers[0xF] = shifted_out;
                             break;
                         }
@@ -396,9 +407,9 @@ int main(void)
                             }
                             break;
 
-                        // 8XYE: shift
+                        // 8XYE: shift (ambigious instruction)
                         case 0xE: {
-                            registers[x] = registers[y]; // Optional (ambigious instruction)
+                            // registers[x] = registers[y]; // Optional 
                             uint8_t shifted_out = registers[x] & 1;
                             registers[x] <<= 1;
 
@@ -414,6 +425,7 @@ int main(void)
                         }
                         break;
                     }
+                }
                 // 9XY0: skip conditionally
                 case 0x9:
                     if (registers[x] != registers[y])
