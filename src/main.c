@@ -225,10 +225,10 @@ int main(void)
             uint16_t instruction_1 = memory[pc] << 8;
             uint16_t instruction_2 = memory[pc + 1];
             uint16_t opcode = instruction_1 | instruction_2;
-            pc += 2;            
-            // Decode
+            pc += 2;
 
-            // Opcode is made up of 4 nibbles (each 4 bits), so we use masking and shifting to get each nibble
+            // Decode: opcode is made up of 4 nibbles (each 4 bits)
+            // we use masking and shifting to get each nibble
 
             uint8_t mask = 0xF; // 4 rightmost bits (1111 in binary)
             uint8_t nibble_1 = (opcode >> 12) & mask; // find the kind of instruction
@@ -253,8 +253,6 @@ int main(void)
             SDL_Scancode ex_scancode = keypad[keyboard_to_index(curr_key)].scancode;
 
             // Execute
-
-            // Type of instruction
             switch (nibble_1){
                 case 0x0:
                     switch(nibble_4){
