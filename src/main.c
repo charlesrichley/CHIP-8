@@ -1,11 +1,11 @@
 #include "header.h"
 
-char *file_name = "4-flags.ch8";
+char *file_name = "5-quirks.ch8";
 
 // Memory is 4 kB (4096 bytes). 
-// Initial space can be left empty (except for fonts)
+// Initial space can be left empty before 0x200 (except for fonts at 0x50)
 uint8_t memory[4096];
-uint8_t pixels[WIDTH][HEIGHT]; // indexing: pixels[x][y]
+uint8_t pixels[WIDTH][HEIGHT];
 Keypad keypad[16];
 uint8_t registers[16];
 Stack stack;
@@ -13,7 +13,28 @@ SDL_FRect rects_arr[WIDTH][HEIGHT];
 
 int main(void)
 {
+    // Quirks
+
+    // 8XY1, 8XY2, 8XY3 reset registers[0xF] to 0
+    bool QUIRK_RESET_VF = true;     
+    
+     // FX55 and FX65 incrementing index register
+    bool QUIRK_MEMORY = true; 
+
+    // DXYN only called once per frame 
+    bool QUIRK_DISPLAY_WAIT = false; 
+
+    // Sprites get clipped instead of wrapping in DXYN
+    bool QUIRK_CLIPPING = false;
+
+    // 8XY6 and 8XYE only operate on VX instead of storing shifted VY in VX
+    bool QUIRK_SHIFTING = true; 
+
+    // BNNN doesn't use v0, but vX instead (X is highest nibble of NNN)
+    bool QUIRK_JUMPING = false;
+
     int INDEX_SS = 0;
+    memory[0x1FF] = 1; // For CHIP-8 testing
 
     // Open file (for loading ROM data into memory)
     FILE *ROM_file = fopen(file_name, "r");
@@ -27,7 +48,7 @@ int main(void)
     fseek(ROM_file, 0, SEEK_END);
     long size = ftell(ROM_file); // size of file in bytes
 
-    // CHIP-8 program starting at 0x200 - ensure file doesn't exceed capacity
+    // CHIP-8 program starts at 0x200 - ensure file doesn't exceed memory capacity
     if (size > (4096 - 0x200))
     {
         SDL_Log("File is too large (memory exceeded).\n");
@@ -70,21 +91,27 @@ int main(void)
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
     {
         SDL_Log("Window initialisation failed! Reason: %s\n", SDL_GetError());
+        return 1;
     }
 
     SDL_Window* window = SDL_CreateWindow("CHIP-8", WIDTH * SCALE, HEIGHT * SCALE, 0);
     if (window == NULL)
     {
         SDL_Log("Window creation failed. Reason: %s\n", SDL_GetError());
+        return 1;
     }
 
     SDL_Renderer* renderer = SDL_CreateRenderer(window, NULL);
     if (renderer == NULL){
         SDL_Log("Renderer creation failed. Reason: %s\n", SDL_GetError());
+        return 1;
     }
 
     // Allow renderer to adjust to window size (adjusted by scale factor)
     SDL_SetRenderLogicalPresentation(renderer, WIDTH, HEIGHT, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
+
+    // Create variables for managing quirks
+    bool DXYN_PAUSED = false;
 
     // Initialising program counter and index register
     uint16_t pc = 0x200;
@@ -165,7 +192,7 @@ int main(void)
             }
         }
         
-        // Ensure index registe does not overflow
+        // Ensure index register does not overflow
         if (index_register >= 4096)
         {
             SDL_Log("Index register has overflowed. \n");
@@ -177,6 +204,7 @@ int main(void)
         {
             sound_timer -= 1;
 
+            // Adapted from SDL documentation of examples
             SDL_AudioSpec spec;
 
             spec.channels = 1;
@@ -187,6 +215,7 @@ int main(void)
             if (!stream)
             {
                 SDL_Log("Couldn't create audio stream. Reason: %s\n", SDL_GetError());
+                return 1;
             }
             SDL_ResumeAudioStreamDevice(stream);  
             
@@ -248,6 +277,7 @@ int main(void)
             if (ex_keyboard == NULL)
             {
                 SDL_Log("Keyboard is NULL. Reason: %s\n", SDL_GetError());
+                return 1;
             }
             SDL_Scancode ex_scancode = keypad[keyboard_to_index(curr_key)].scancode;
 
@@ -300,7 +330,7 @@ int main(void)
                     }
                     break;
                 
-                // 5XY0 skip conditionally (if VX = VY, skip)
+                // 5XY0 skip conditionally (if Vx = Vy, skip)
                 case 0x5:
                     if (registers[x] == registers[y])
                     {
@@ -330,17 +360,28 @@ int main(void)
                         // 8XY1: binary OR
                         case 0x1:
                             registers[x] = orig_registers_x | orig_registers_y;
-                            // registers[0xF] = 0;
+                            if (QUIRK_RESET_VF)
+                            {
+                                registers[0xF] = 0;
+                            }
                             break;
                         
                         // 8XY2: binary AND
                         case 0x2:
                             registers[x] = registers[x] & registers[y];
+                            if (QUIRK_RESET_VF)
+                            {
+                                registers[0xF] = 0;
+                            }
                             break;
 
                         // 8XY3: bitwise XOR
                         case 0x3:
                             registers[x] = registers[x] ^ registers[y];
+                            if (QUIRK_RESET_VF)
+                            {
+                                registers[0xF] = 0;
+                            }
                             break;
 
                         // 8XY4: add
@@ -375,9 +416,12 @@ int main(void)
                             break;
                         }
                         
-                        // 8XY6 and 8XYE: shift (ambigious instruction)
+                        // 8XY6 and 8XYE: shift 
                         case 0x6: {
-                            // registers[x] = registers[y]; // Optional
+                            if (!QUIRK_SHIFTING)
+                            {
+                                registers[x] = registers[y]; 
+                            }
                             uint8_t shifted_out = registers[x] & 1;
                             registers[x] >>= 1;
                             registers[0xF] = shifted_out;
@@ -385,8 +429,7 @@ int main(void)
                         }
 
                         // 8XY7: subtract
-                        case 0x7:
-                            // Affects the carry flag
+                        case 0x7: 
                             registers[x] = registers[y] - registers[x];
                             if (registers[y] >= registers[x])
                             {
@@ -400,7 +443,10 @@ int main(void)
 
                         // 8XYE: shift (ambigious instruction)
                         case 0xE: {
-                            // registers[x] = registers[y]; // Optional
+                            if (!QUIRK_SHIFTING)
+                            {
+                                registers[x] = registers[y]; 
+                            }
                             uint8_t shifted_out = (registers[x] >> 7) & 1;
                             registers[x] <<= 1;
                             registers[0xF] = shifted_out;
@@ -426,10 +472,14 @@ int main(void)
 
                 // BNNN: jump with offset (ambiguous)
                 case 0xB:
-                    pc += (NNN + registers[0x0]);
-                    // CHIP-8 and SUPER-CHIP change to BXNN (could be accidentally)
+                    pc = NNN + registers[0x0];
+
+                    // CHIP-8 and SUPER-CHIP change BXNN (could be accidentally)
                     // Where pc jumps to XNN + registers[x]
-                    // pc += (((x << 8) | NN)) + registers[x]);
+                    if (QUIRK_JUMPING)
+                    {
+                        pc = (((x << 8) | NN)) + registers[x];
+                    }
                     break;
 
                 // CXNN: random
@@ -439,6 +489,13 @@ int main(void)
                 
                 // DXYN: display (drawing instruction)
                 case 0xD: {
+                    if (DXYN_PAUSED)
+                    {
+                        pc -= 2;
+                        break;
+                    }
+
+                    // Implement QUIRK_CLIPPING
                     uint8_t x_start = registers[x] % WIDTH;
                     uint8_t y_coord = registers[y] % HEIGHT;
                     registers[0xF] = 0;
@@ -477,6 +534,11 @@ int main(void)
                         }
                         y_coord += 1;
                     }
+                    
+                    if (QUIRK_DISPLAY_WAIT)
+                    {
+                        DXYN_PAUSED = true;
+                    }
                     break;
                 }
 
@@ -502,7 +564,7 @@ int main(void)
 
                 case 0xF:
                     switch(nibble_4){
-                        // FX07: timer
+                        // FX07: timer (set VX to value of delay timer)
                         case 0x7:
                             registers[x] = delay_timer;
                             break;
@@ -520,6 +582,10 @@ int main(void)
                                     {
                                         memory[index_register + i] = registers[i];
                                     }
+                                    if (QUIRK_MEMORY)
+                                    {
+                                        index_register+= (x + 1);
+                                    }
                                     break;
 
                                 // FX65: load memory (opposite of FX55)
@@ -527,6 +593,10 @@ int main(void)
                                     for (int i = 0; i <= x; i++)
                                     {
                                         registers[i] = memory[index_register + i];
+                                    }
+                                    if (QUIRK_MEMORY)
+                                    {
+                                        index_register+= (x + 1);
                                     }
                                     break;
                             }
@@ -562,6 +632,7 @@ int main(void)
                             // Not been initalised
                             else if (!fx0a_waiting && !fx0a_completed)
                             {
+                                pc -= 2;
                                 fx0a_waiting = true;
                             }
                             break;
@@ -598,6 +669,12 @@ int main(void)
             }
         }
 
+        // Reset DXYN_PAUSED
+        if (QUIRK_DISPLAY_WAIT)
+        {
+            DXYN_PAUSED = false;
+        }
+
         // Take screenshots for documentation
         if (INDEX_SS > 70 && INDEX_SS % 100 == 0)
         {
@@ -605,10 +682,12 @@ int main(void)
             if (ss_surface == NULL)
             {
                 SDL_Log("Screenshot failed! Reason: %s\n", SDL_GetError());
+                return 1;
             }
             if (!IMG_SavePNG(ss_surface, "output.png"))
             {
                 SDL_Log("Could not save screenshot! Reason: %s\n", SDL_GetError());
+                return 1;
             }
             SDL_DestroySurface(ss_surface);
         }
