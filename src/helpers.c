@@ -22,25 +22,13 @@ uint8_t sprite_arr[80] = {0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
 0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
 0xF0, 0x80, 0xF0, 0x80, 0x80}; // F
 
-// Must read font data
-void draw_byte(int x, int y, int scale, SDL_Renderer* renderer)
-{
-    for (int x_add = 0; x_add < 4; x_add++)
-    {
-        for (int y_add = 0; y_add < 5; y_add++)
-        {
-            SDL_FRect rect = {(x+x_add) * scale, (y+y_add) * scale, 1, 1};
-            SDL_RenderRect(renderer, &rect);
-        }
-    }
-}
-
-// Stack operations: push, pop, peek - all O(1)
+// Checks if a stack is empty 
 bool is_empty(Stack *stack)
 {
     return (stack->top == -1);
 }
 
+// Initialises a stack
 void initialise(Stack *stack)
 {
     stack->top = -1;
@@ -49,7 +37,7 @@ void initialise(Stack *stack)
 // Inserts element to top of stack
 void push(Stack *stack, uint16_t new_value)
 {
-    stack->arr[stack->top+1] = new_value;
+    stack->arr[(stack->top) + 1] = new_value;
     stack->top += 1;
 }
 
@@ -61,6 +49,31 @@ int pop(Stack *stack)
     return popped_number;
 }
 
+// Turns every pixel on (sets value to 1)
+void pixels_on(uint8_t pixels[WIDTH][HEIGHT])
+{
+    for (int i = 0; i < WIDTH; i++)
+    {
+        for (int j = 0; j < HEIGHT; j++)
+        {
+            pixels[i][j] = 1;
+        }
+    }
+}
+
+// Returns rectangle at coordinates (i,j) at width w and height h
+SDL_FRect get_frect(int i, int j, int w, int h)
+{
+    SDL_FRect rect;
+    rect.x = i; 
+    rect.y = j;
+    rect.w = w;
+    rect.h = h;
+    return rect;
+}
+
+
+// Gets CHIP-8 key from keyboard key
 int chip_8_to_keyboard(int chip_8)
 {
     for (int i = 0; i < 16; i++)
@@ -73,6 +86,7 @@ int chip_8_to_keyboard(int chip_8)
     return -1;
 }
 
+// Gets keyboard key from CHIP-8 key
 int keyboard_to_chip_8(int keyboard)
 {
     for (int i = 0; i < 16; i++)
@@ -85,68 +99,11 @@ int keyboard_to_chip_8(int keyboard)
     return -1;
 }
 
-SDL_FRect get_frect(int i, int j, int w, int h)
-{
-    SDL_FRect rect;
-    rect.x = i; 
-    rect.y = j;
-    rect.w = w;
-    rect.h = h;
-    return rect;
-}
-
-SDL_Rect get_rect(int i, int j, int w, int h)
-{
-    SDL_Rect rect;
-    rect.x = i; 
-    rect.y = j;
-    rect.w = w;
-    rect.h = h;
-    return rect;
-}
-
-void printNum(u_int16_t x)
-{
-    printf("%" PRIu16 "\n", x);
-}
-
-void print_pixels(uint8_t pixels[WIDTH][HEIGHT])
-{
-    for (int i = 0; i < WIDTH; i++)
-    {
-        for (int j = 0; j < HEIGHT; j++)
-        {
-            printf("%i / ", pixels[i][j]);
-        }
-    }
-}
-
-void pixels_on(uint8_t pixels[WIDTH][HEIGHT])
-{
-    for (int i = 0; i < WIDTH; i++)
-    {
-        for (int j = 0; j < HEIGHT; j++)
-        {
-            pixels[i][j] = 1;
-        }
-    }
-}
-
-void print_memory(uint8_t memory[4096])
-{
-    for (int i = 0; i < 4096; i++)
-    {
-        uint8_t curr = memory[i];
-        printf("%u / ", curr);
-    }
-    printf("\n");
-}
-
-int scancode_to_index(Keypad keypad[16], SDL_Scancode scancode)
+int keyboard_to_index(char c)
 {
     for (int i = 0; i < 16; i++)
     {
-        if (keypad[i].scancode == scancode)
+        if (keyboard_arr[i] == c)
         {
             return i;
         }
@@ -154,32 +111,12 @@ int scancode_to_index(Keypad keypad[16], SDL_Scancode scancode)
     return -1;
 }
 
-void print_keypad(Keypad keypad[16])
+// Returns index of scancode value in keypad array
+int scancode_to_index(Keypad keypad[16], SDL_Scancode scancode)
 {
     for (int i = 0; i < 16; i++)
     {
-        printf("chip_8: %d\n", keypad[i].chip_8);
-        printf("keyboard: %c\n", keypad[i].keyboard);
-        printf("SDL_scancode: %d\n", keypad[i].scancode);
-        printf("\n");
-    }
-    printf("\n");
-}
-
-void print_chip_8_arr(int chip_8_arr[16])
-{
-    for (int i = 0; i < 16; i++)
-    {
-        printf("%d\n", chip_8_arr[i]);
-    }
-    printf("\n");
-}
-
-int keyboard_to_index(char c)
-{
-    for (int i = 0; i < 16; i++)
-    {
-        if (keyboard_arr[i] == c)
+        if (keypad[i].scancode == scancode)
         {
             return i;
         }
