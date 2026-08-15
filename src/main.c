@@ -1,6 +1,6 @@
 #include "header.h"
 
-char *file_name = "5-quirks.ch8";
+char *file_name = "ROMS/1dcell.ch8";
 
 // Memory is 4 kB (4096 bytes). 
 // Initial space can be left empty before 0x200 (except for fonts at 0x50)
@@ -13,13 +13,13 @@ SDL_FRect rects_arr[WIDTH][HEIGHT];
 
 int main(void)
 {
-    // Quirks
+    // QUIRKS: CHIP-8 has ambigious instructions so there are settings to adjust quirks
 
     // 8XY1, 8XY2, 8XY3 reset registers[0xF] to 0
-    bool QUIRK_RESET_VF = true;     
+    bool QUIRK_RESET_VF = false;     
     
      // FX55 and FX65 incrementing index register
-    bool QUIRK_MEMORY = true; 
+    bool QUIRK_MEMORY = false; 
 
     // DXYN only called once per frame 
     bool QUIRK_DISPLAY_WAIT = false; 
@@ -30,11 +30,14 @@ int main(void)
     // 8XY6 and 8XYE only operate on VX instead of storing shifted VY in VX
     bool QUIRK_SHIFTING = true; 
 
-    // BNNN doesn't use v0, but vX instead (X is highest nibble of NNN)
+    // BNNN doesn't use v0, but vX instead (X is first nibble in NNN)
     bool QUIRK_JUMPING = false;
 
-    int INDEX_SS = 0;
-    memory[0x1FF] = 1; // For CHIP-8 testing
+    // FX1E sets VF to 0 if the index registers overflow
+    bool QUIRK_FX1E_OVERFLOW_FLAG = true;
+
+    // FX0A resumes execution if the key is both pressed and released or simply pressed
+    bool QUIRK_FX0A_PRESSED_AND_RELEASED = true;
 
     // Open file (for loading ROM data into memory)
     FILE *ROM_file = fopen(file_name, "r");
@@ -110,8 +113,10 @@ int main(void)
     // Allow renderer to adjust to window size (adjusted by scale factor)
     SDL_SetRenderLogicalPresentation(renderer, WIDTH, HEIGHT, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
 
-    // Create variables for managing quirks
-    bool DXYN_PAUSED = false;
+    // Managing keyboard input
+    bool fx0a_waiting = false;
+    bool fx0a_completed = false;
+    uint8_t fx0a_hexadecimal;
 
     // Initialising program counter and index register
     uint16_t pc = 0x200;
@@ -122,14 +127,10 @@ int main(void)
     uint8_t sound_timer = 0;
     int curr_sample = 0;
 
-    // Managing keyboard input
-    bool fx0a_waiting = false;
-    bool fx0a_completed = false;
-    uint8_t fx0a_hexadecimal;
-
     // Event loop
     const float target_frame_time = 1000.0f / 60.0f;  // 60 FPS, so 0.017 seconds per frame.
     bool quitting = false;
+    bool DXYN_PAUSED = false;
     SDL_Event event;
     SDL_zero(event);
 
@@ -151,6 +152,16 @@ int main(void)
                     {
                         SDL_Scancode event_scancode = event.key.scancode;
                         int index_key_down = scancode_to_index(keypad, event_scancode);
+
+                        // Key only has to be pressed for execution to resume
+                        if (!QUIRK_FX0A_PRESSED_AND_RELEASED)
+                        {
+                            fx0a_completed = true;
+                            fx0a_waiting = false;
+                            fx0a_hexadecimal = chip_8_arr[index_key_down];
+                            break;
+                        }
+
                         if (index_key_down != -1)
                         {
                             keypad[index_key_down].is_down = true;
@@ -161,7 +172,7 @@ int main(void)
 
                 case SDL_EVENT_KEY_UP:
                 {
-                    if (fx0a_waiting)
+                    if (fx0a_waiting && QUIRK_FX0A_PRESSED_AND_RELEASED)
                     {
                         SDL_Scancode event_scancode = event.key.scancode;
                         int index_key_up = scancode_to_index(keypad, event_scancode);
@@ -247,7 +258,7 @@ int main(void)
             delay_timer -= 1;
         }
 
-        for (int instructions_read = 0; instructions_read < INSRUCTIONS_PER_FRAME; instructions_read++, INDEX_SS++)
+        for (int instructions_read = 0; instructions_read < INSRUCTIONS_PER_FRAME; instructions_read++)
         {
             // Fetch
             uint16_t instruction_1 = memory[pc] << 8;
@@ -495,7 +506,6 @@ int main(void)
                         break;
                     }
 
-                    // Implement QUIRK_CLIPPING
                     uint8_t x_start = registers[x] % WIDTH;
                     uint8_t y_coord = registers[y] % HEIGHT;
                     registers[0xF] = 0;
@@ -504,8 +514,16 @@ int main(void)
                     {
                         if (y_coord >= HEIGHT || y_coord < 0)
                         {
-                            break;
+                            if (QUIRK_CLIPPING)
+                            {
+                                break;
+                            }
+                            else
+                            {
+                                y_coord %= HEIGHT;
+                            }
                         }
+
                         uint8_t x_coord = x_start;
                         uint8_t sprite = memory[index_register + row];
                         uint8_t x_max = x_coord + 8;
@@ -514,7 +532,14 @@ int main(void)
                         {
                             if (x_coord >= WIDTH || x_coord < 0)
                             {
-                                break;
+                                if (QUIRK_CLIPPING)
+                                {
+                                    break;
+                                }
+                                else
+                                {
+                                    x_coord *= WIDTH;
+                                }
                             }
 
                             uint8_t sprite_pixel = (sprite >> i) & 1;
@@ -610,10 +635,14 @@ int main(void)
                         // FX1E: add to index
                         case 0xE:
                             index_register += registers[x];
-                            if (index_register > 0x0FFF)
-                            {
-                                registers[0xF] = 1;
-                            }
+
+                            // On original COSMAC VIP, VF was not affected on overflow
+                            // However, CHIP-8 interpreter for Amiga would set VF to 1 on overflow
+                            if (QUIRK_FX1E_OVERFLOW_FLAG)
+                                if (index_register > 0x0FFF)
+                                {
+                                    registers[0xF] = 1;
+                                }
                             break;
 
                         // FX0A: get key (stops execution and waits for key input)
@@ -669,27 +698,10 @@ int main(void)
             }
         }
 
-        // Reset DXYN_PAUSED
+        // Reset DXYN_PAUSED at end of loop
         if (QUIRK_DISPLAY_WAIT)
         {
             DXYN_PAUSED = false;
-        }
-
-        // Take screenshots for documentation
-        if (INDEX_SS > 70 && INDEX_SS % 100 == 0)
-        {
-            SDL_Surface *ss_surface = SDL_RenderReadPixels(renderer, NULL);
-            if (ss_surface == NULL)
-            {
-                SDL_Log("Screenshot failed! Reason: %s\n", SDL_GetError());
-                return 1;
-            }
-            if (!IMG_SavePNG(ss_surface, "output.png"))
-            {
-                SDL_Log("Could not save screenshot! Reason: %s\n", SDL_GetError());
-                return 1;
-            }
-            SDL_DestroySurface(ss_surface);
         }
 
         SDL_RenderPresent(renderer);
