@@ -1,6 +1,6 @@
 #include "header.h"
 
-char *file_name = "ROMS/1dcell.ch8";
+char *file_name = "ROMS/snek.ch8";
 
 // Memory is 4 kB (4096 bytes). 
 // Initial space can be left empty before 0x200 (except for fonts at 0x50)
@@ -13,6 +13,95 @@ SDL_FRect rects_arr[WIDTH][HEIGHT];
 
 int main(void)
 {
+    // Open window for game and settings selection
+
+    // Initialise SDL
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
+    {
+        SDL_Log("SDL video/audio initialisation failed! Reason: %s\n", SDL_GetError());
+        return 1;
+    }
+
+    SDL_Window* welcome_window = SDL_CreateWindow("CHIP-8", WIDTH * SCALE, HEIGHT * SCALE, 0);
+    if (welcome_window == NULL)
+    {
+        SDL_Log("Window creation failed. Reason: %s\n", SDL_GetError());
+        return 1;
+    }
+
+    SDL_Renderer* welcome_renderer = SDL_CreateRenderer(welcome_window, NULL);
+    if (welcome_renderer == NULL){
+        SDL_Log("Renderer creation failed. Reason: %s\n", SDL_GetError());
+        return 1;
+    }
+
+    // Allow renderer to adjust to window size (adjusted by scale factor)
+    SDL_SetRenderLogicalPresentation(welcome_renderer, WIDTH, HEIGHT, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
+
+    // Get user input
+    bool typing = true;
+    bool quitting = false;
+    char input[FILE_NAME_SIZE];
+    input[0] = '\0';
+    SDL_Event event;
+    SDL_zero(event);
+    if (!SDL_StartTextInput(welcome_window))
+    {
+        SDL_Log("Could not get text input. Reason: %s\n", SDL_GetError());
+        return 1;
+    }
+
+    while (!quitting)
+    {
+        while (SDL_PollEvent(&event))
+        {
+            int input_length = strlen(input);
+
+            switch(event.type){
+                case SDL_EVENT_QUIT:
+                    quitting = true;
+                    break;
+                
+                case SDL_EVENT_KEY_DOWN:
+                    if (typing)
+                    {  
+                        if ((event.key.key = SDL_EVENT_QUIT))
+                        {
+                            // Stop further text input
+                            if (!SDL_StopTextInput(welcome_window))
+                            {
+                                SDL_Log("Could not end text input. Reason: %s\n", SDL_GetError());
+                                return 1;
+                            }
+                            typing = false;
+                        }
+
+                        else if ((event.key.key == SDLK_BACKSPACE) && strcmp(input, "") != 0)  
+                        {
+                            input[input_length - 1] = '\0';
+                        }
+                    }
+                    break;
+
+                case SDL_EVENT_TEXT_INPUT:
+                    if (typing)
+                    {
+                        strcat(input, event.text.text);
+                    }
+                    break;
+            }
+        }
+
+        if (quitting)
+        {
+            SDL_DestroyWindow(welcome_window);
+            SDL_DestroyRenderer(welcome_renderer);
+            welcome_window = NULL;
+            welcome_renderer = NULL;
+            break;
+        }
+    }
+
     // QUIRKS: CHIP-8 has ambigious instructions so there are settings to adjust quirks
 
     // 8XY1, 8XY2, 8XY3 reset registers[0xF] to 0
@@ -90,13 +179,6 @@ int main(void)
         }
     }
 
-    // Initialise SDL
-    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
-    {
-        SDL_Log("Window initialisation failed! Reason: %s\n", SDL_GetError());
-        return 1;
-    }
-
     SDL_Window* window = SDL_CreateWindow("CHIP-8", WIDTH * SCALE, HEIGHT * SCALE, 0);
     if (window == NULL)
     {
@@ -129,10 +211,9 @@ int main(void)
 
     // Event loop
     const float target_frame_time = 1000.0f / 60.0f;  // 60 FPS, so 0.017 seconds per frame.
-    bool quitting = false;
+    quitting = false;
     bool DXYN_PAUSED = false;
-    SDL_Event event;
-    SDL_zero(event);
+    SDL_Delay(500);
 
     while (!quitting)
     {
