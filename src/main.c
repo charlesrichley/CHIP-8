@@ -38,55 +38,53 @@ int main(void)
     // Allow renderer to adjust to window size (adjusted by scale factor)
     SDL_SetRenderLogicalPresentation(welcome_renderer, WIDTH, HEIGHT, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
 
-    // Get user input
-    bool typing = true;
-    bool quitting = false;
-    char input[FILE_NAME_SIZE];
-    input[0] = '\0';
-    SDL_Event event;
-    SDL_zero(event);
     if (!SDL_StartTextInput(welcome_window))
     {
         SDL_Log("Could not get text input. Reason: %s\n", SDL_GetError());
         return 1;
     }
 
+    // Get user input
+    bool typing = true;
+    bool quitting = false;
+    Input_String input_string;
+    input_string.input[0] = '\0';
+    input_string.length = 0;
+    SDL_Event event;
+    SDL_zero(event);
+
     while (!quitting)
     {
         while (SDL_PollEvent(&event))
         {
-            int input_length = strlen(input);
-
             switch(event.type){
                 case SDL_EVENT_QUIT:
                     quitting = true;
-                    break;
-                
-                case SDL_EVENT_KEY_DOWN:
-                    if (typing)
-                    {  
-                        if ((event.key.key = SDL_EVENT_QUIT))
-                        {
-                            // Stop further text input
-                            if (!SDL_StopTextInput(welcome_window))
-                            {
-                                SDL_Log("Could not end text input. Reason: %s\n", SDL_GetError());
-                                return 1;
-                            }
-                            typing = false;
-                        }
-
-                        else if ((event.key.key == SDLK_BACKSPACE) && strcmp(input, "") != 0)  
-                        {
-                            input[input_length - 1] = '\0';
-                        }
+                    // Stop further text input
+                    if (!SDL_StopTextInput(welcome_window))
+                    {
+                        SDL_Log("Could not end text input. Reason: %s\n", SDL_GetError());
+                        return 1;
                     }
+                    typing = false;
                     break;
 
                 case SDL_EVENT_TEXT_INPUT:
                     if (typing)
                     {
-                        strcat(input, event.text.text);
+                        strcat(input_string.input, event.text.text);
+                        input_string.length++;
+                    }
+                    break;
+                
+                case SDL_EVENT_KEY_DOWN:
+                    if (typing)
+                    {  
+                        if ((event.key.key == SDLK_BACKSPACE) && strcmp(input_string.input, "") != 0)  
+                        {
+                            input_string.input[input_string.length - 1] = '\0';
+                            input_string.length--;
+                        }
                     }
                     break;
             }
@@ -101,6 +99,34 @@ int main(void)
             break;
         }
     }
+
+    // Initialise TTF
+    if (!TTF_Init())
+    {
+        SDL_Log("Could not initialise TTF. Reason: %s\n", SDL_GetError());
+        return 1;
+    }
+
+    TTF_Font *font = TTF_OpenFont("bold_font.ttf", 24.0f);
+    if (!font)
+    {
+        SDL_Log("Could not initialise font. Reason: %s\n", SDL_GetError());
+    }
+
+    SDL_Surface *surface = TTF_RenderText_Blended(font, "CHIP-8", sizeof("CHIP-8"), );
+    if (!surface)
+    {
+        SDL_Log("Could not initialise surface. Reason: %s\n", SDL_GetError());
+    }
+
+    // SDL_CreateTextureFromSurface()
+    // SDL_FreeSurface
+    // SDL_RenderCopy with an SDL_rect
+
+    // SDL_DestroyTextture
+    // SDL_FreeSurface
+    // SDL_CloseFont
+    // TTF_Quit
 
     // QUIRKS: CHIP-8 has ambigious instructions so there are settings to adjust quirks
 
@@ -213,7 +239,7 @@ int main(void)
     const float target_frame_time = 1000.0f / 60.0f;  // 60 FPS, so 0.017 seconds per frame.
     quitting = false;
     bool DXYN_PAUSED = false;
-    SDL_Delay(500);
+    SDL_Delay(300);
 
     while (!quitting)
     {
