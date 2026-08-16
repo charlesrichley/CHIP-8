@@ -9,7 +9,15 @@
 #include <time.h>
 #include <SDL3/SDL.h>
 #include <SDL3_image/SDL_image.h>
+#include <SDL3_ttf/SDL_ttf.h>
 #include <inttypes.h>
+
+#define WIDTH 64
+#define HEIGHT 32
+#define SCALE 16
+#define INSRUCTIONS_PER_FRAME 12
+
+#define FILE_NAME_SIZE 2000
 
 typedef struct 
 {
@@ -26,30 +34,32 @@ typedef struct
 
 } Keypad;
 
-#define WIDTH 64
-#define HEIGHT 32
-#define SCALE 16
-#define INSRUCTIONS_PER_SECOND 10
+typedef struct
+{
+    char input[FILE_NAME_SIZE];
+    int length; 
+} Input_String;
 
 extern int chip_8_arr[16];
 extern char keyboard_arr[16];
 extern SDL_Scancode scancode_arr[16];
 extern uint8_t sprite_arr[80];
 
-void draw_byte(int x, int y, int scale, SDL_Renderer* renderer);
 bool is_empty(Stack *stack);
 void initialise(Stack *stack);
 void push(Stack *stack, uint16_t new_value);
 int pop(Stack *stack);
+
+SDL_FRect get_frect(int i, int j, int w, int h);
+void pixels_on(uint8_t pixels[WIDTH][HEIGHT]);
+
+int keyboard_to_index(char c);
+int scancode_to_index(Keypad keypad[16], SDL_Scancode scancode);
 int chip_8_to_keyboard(int chip_8);
 int keyboard_to_chip_8(int keyboard);
-SDL_FRect get_frect(int i, int j, int w, int h);
-SDL_Rect get_rect(int i, int j, int w, int h);
-void printNum(u_int16_t x);
-void print_pixels(uint8_t pixels[WIDTH][HEIGHT]);
-void pixels_on(uint8_t pixels[WIDTH][HEIGHT]);
+
 void print_memory(uint8_t memory[4096]);
 void print_keypad(Keypad keypad[16]);
 void print_chip_8_arr(int chip_8_arr[16]);
-int keyboard_to_index(char c);
-int scancode_to_index(Keypad keypad[16], SDL_Scancode scancode);
+void printNum(u_int16_t x);
+void print_pixels(uint8_t pixels[WIDTH][HEIGHT]);
