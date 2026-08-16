@@ -1,5 +1,5 @@
 # CHIP-8
-I am currently developing a CHIP-8 emulator using C (_**work in progress**_).
+I am currently developing a CHIP-8 emulator in C (_**work in progress**_).
 
 ### Compiler message 
 "clang main.c helpers.c -o main $(pkg-config --cflags --libs sdl3 sdl3-image) && ./main"
