@@ -44,6 +44,56 @@ int main(void)
         return 1;
     }
 
+    // Initialise TTF
+    if (!TTF_Init())
+    {
+        SDL_Log("Could not initialise TTF. Reason: %s\n", SDL_GetError());
+        return 1;
+    }
+
+    // Font settings for title
+    SDL_Color font_color;
+    font_color.r = 255;
+    font_color.g = 255;
+    font_color.b = 255;
+    font_color.a = 255;
+
+    // Initialising font
+    const float title_font_size = 24;
+    TTF_Font *font = TTF_OpenFont("bold_font.ttf", title_font_size);
+    if (!font)
+    {
+        SDL_Log("Could not initialise font. Reason: %s\n", SDL_GetError());
+        return 1;
+    }
+
+    // Initialising surface
+    SDL_Surface *welcome_surface = TTF_RenderText_Blended(font, "CHIP-8", sizeof("CHIP-8") - 1, font_color);
+    if (!welcome_surface)
+    {
+        SDL_Log("Could not initialise surface. Reason: %s\n", SDL_GetError());
+        return 1;
+    }
+
+    // Initialsing texture and choosing coordinates for title in a rect
+    SDL_Texture *welcome_texture = SDL_CreateTextureFromSurface(welcome_renderer, welcome_surface);
+    if (!welcome_texture)
+    {
+        SDL_Log("Could not initialise texture. Reason: %s\n", SDL_GetError());
+    }
+    const SDL_FRect title_rect = get_frect_centered(100, 100, 100, 100);
+
+    // Rendering texture
+    if (!SDL_RenderTexture(welcome_renderer, welcome_texture, NULL, &title_rect))
+    {
+        SDL_Log("Could not render title text. Reason: %s\n", SDL_GetError());
+    }
+
+    if (!SDL_RenderPresent(welcome_renderer))
+    {
+        SDL_Log("Could not update renderer for welcome screen. Reason: %s\n", SDL_GetError());
+    }
+
     // Get user input
     bool typing = true;
     bool quitting = false;
@@ -94,39 +144,20 @@ int main(void)
         {
             SDL_DestroyWindow(welcome_window);
             SDL_DestroyRenderer(welcome_renderer);
+            SDL_DestroyTexture(welcome_texture);
+            SDL_DestroySurface(welcome_surface);
+            TTF_CloseFont(font);
+            TTF_Quit();
+
             welcome_window = NULL;
             welcome_renderer = NULL;
+            welcome_texture = NULL;
+            welcome_surface = NULL;
+            font = NULL;
+
             break;
         }
     }
-
-    // Initialise TTF
-    if (!TTF_Init())
-    {
-        SDL_Log("Could not initialise TTF. Reason: %s\n", SDL_GetError());
-        return 1;
-    }
-
-    TTF_Font *font = TTF_OpenFont("bold_font.ttf", 24.0f);
-    if (!font)
-    {
-        SDL_Log("Could not initialise font. Reason: %s\n", SDL_GetError());
-    }
-
-    SDL_Surface *surface = TTF_RenderText_Blended(font, "CHIP-8", sizeof("CHIP-8"), );
-    if (!surface)
-    {
-        SDL_Log("Could not initialise surface. Reason: %s\n", SDL_GetError());
-    }
-
-    // SDL_CreateTextureFromSurface()
-    // SDL_FreeSurface
-    // SDL_RenderCopy with an SDL_rect
-
-    // SDL_DestroyTextture
-    // SDL_FreeSurface
-    // SDL_CloseFont
-    // TTF_Quit
 
     // QUIRKS: CHIP-8 has ambigious instructions so there are settings to adjust quirks
 
@@ -201,20 +232,20 @@ int main(void)
     {
         for (int j = 0; j < HEIGHT; j++)
         {
-            rects_arr[i][j] = get_frect(i, j, 1, 1);
+            rects_arr[i][j] = get_frect_TL(i, j, 1, 1);
         }
     }
 
     SDL_Window* window = SDL_CreateWindow("CHIP-8", WIDTH * SCALE, HEIGHT * SCALE, 0);
     if (window == NULL)
     {
-        SDL_Log("Window creation failed. Reason: %s\n", SDL_GetError());
+        SDL_Log("Window creation failed. \nReason: %s\n", SDL_GetError());
         return 1;
     }
 
     SDL_Renderer* renderer = SDL_CreateRenderer(window, NULL);
     if (renderer == NULL){
-        SDL_Log("Renderer creation failed. Reason: %s\n", SDL_GetError());
+        SDL_Log("Renderer creation failed. \nReason: %s\n", SDL_GetError());
         return 1;
     }
 
@@ -236,7 +267,7 @@ int main(void)
     int curr_sample = 0;
 
     // Event loop
-    const float target_frame_time = 1000.0f / 60.0f;  // 60 FPS, so 0.017 seconds per frame.
+    const float target_frame_time = 1000 / 60;  // 60 FPS, so 0.017 seconds per frame.
     quitting = false;
     bool DXYN_PAUSED = false;
     SDL_Delay(300);
@@ -811,7 +842,10 @@ int main(void)
             DXYN_PAUSED = false;
         }
 
-        SDL_RenderPresent(renderer);
+        if (!SDL_RenderPresent(renderer))
+        {
+            SDL_Log("Could not render current CHIP-8 display. Reason: %s\n", SDL_GetError());
+        }
 
         // Measuring time of frame for managing FPS
         Uint64 frame_end = SDL_GetTicksNS();
