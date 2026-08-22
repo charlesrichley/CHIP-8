@@ -61,8 +61,8 @@ void pixels_on(uint8_t pixels[WIDTH][HEIGHT])
     }
 }
 
-// Returns rectangle at coordinates (i,j) at width w and height h
-SDL_FRect get_frect(int i, int j, int w, int h)
+// Returns rectangle at coordinates top left at (i,j) width w and height h
+SDL_FRect get_frect_TL(int i, int j, int w, int h)
 {
     SDL_FRect rect;
     rect.x = i; 
@@ -72,6 +72,16 @@ SDL_FRect get_frect(int i, int j, int w, int h)
     return rect;
 }
 
+// Returns rectangle centered at coordinates (i, j) width w height h
+SDL_FRect get_frect_centered(int i, int j, int w, int h)
+{
+    SDL_FRect rect;
+    rect.x = i - w/2;
+    rect.y = j - h/2;
+    rect.w = w;
+    rect.h = h;
+    return rect;
+}
 
 // Gets CHIP-8 key from keyboard key
 int chip_8_to_keyboard(int chip_8)
