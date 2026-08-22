@@ -17,7 +17,7 @@
 #define SCALE 16
 #define INSRUCTIONS_PER_FRAME 12
 
-#define FILE_NAME_SIZE 2000
+#define MAX_FILE_NAME_SIZE 2000
 
 typedef struct 
 {
@@ -36,7 +36,7 @@ typedef struct
 
 typedef struct
 {
-    char input[FILE_NAME_SIZE];
+    char input[MAX_FILE_NAME_SIZE];
     int length; 
 } Input_String;
 
@@ -50,7 +50,8 @@ void initialise(Stack *stack);
 void push(Stack *stack, uint16_t new_value);
 int pop(Stack *stack);
 
-SDL_FRect get_frect(int i, int j, int w, int h);
+SDL_FRect get_frect_TL(int i, int j, int w, int h);
+SDL_FRect get_frect_centered(int i, int j, int w, int h);
 void pixels_on(uint8_t pixels[WIDTH][HEIGHT]);
 
 int keyboard_to_index(char c);
