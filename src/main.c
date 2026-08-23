@@ -1,7 +1,5 @@
 #include "header.h"
 
-char *file_name = "ROMS/snek.ch8";
-
 // Memory is 4 kB (4096 bytes). 
 // Initial space can be left empty before 0x200 (except for fonts at 0x50)
 uint8_t memory[4096];
@@ -13,6 +11,33 @@ SDL_FRect rects_arr[WIDTH][HEIGHT];
 
 int main(void)
 {
+    // <----- QUIRKS ----->
+    // CHIP-8 has ambigious instructions so there are settings to adjust quirks
+
+    // 8XY1, 8XY2, 8XY3 reset registers[0xF] to 0
+    bool QUIRK_RESET_VF = false;     
+    
+     // FX55 and FX65 incrementing index register
+    bool QUIRK_MEMORY = false; 
+
+    // DXYN only called once per frame 
+    bool QUIRK_DISPLAY_WAIT = false; 
+
+    // Sprites get clipped instead of wrapping in DXYN
+    bool QUIRK_CLIPPING = false;
+
+    // 8XY6 and 8XYE only operate on VX instead of storing shifted VY in VX
+    bool QUIRK_SHIFTING = true; 
+
+    // BNNN doesn't use V0, but VX instead (X is first nibble in NNN)
+    bool QUIRK_JUMPING = false;
+
+    // FX1E sets VF to 0 if the index registers overflow
+    bool QUIRK_FX1E_OVERFLOW_FLAG = true;
+
+    // FX0A resumes execution if the key is both pressed and released or simply pressed
+    bool QUIRK_FX0A_PRESSED_AND_RELEASED = true;
+
     // Open window for game and settings selection
 
     // Initialise SDL
@@ -59,7 +84,7 @@ int main(void)
     font_color.a = 255;
 
     // Initialising font
-    const float title_font_size = 24;
+    const float title_font_size = 120; // Higher font size so text is less pixelated
     TTF_Font *font = TTF_OpenFont("bold_font.ttf", title_font_size);
     if (!font)
     {
@@ -69,20 +94,22 @@ int main(void)
 
     // Initialising surface
     char *welcome_text = "CHIP-8";
-    SDL_Surface *welcome_surface = TTF_RenderText_Blended(font, welcome_text, sizeof(welcome_text) - sizeof('\0'), font_color);
+    SDL_Surface *welcome_surface = TTF_RenderText_Blended(font, welcome_text, strlen(welcome_text), font_color);
     if (!welcome_surface)
     {
         SDL_Log("Could not initialise surface. Reason: %s\n", SDL_GetError());
         return 1;
     }
 
-    // Initialsing texture and choosing coordinates for title in a rect
+    // Initialsing texture
     SDL_Texture *welcome_texture = SDL_CreateTextureFromSurface(welcome_renderer, welcome_surface);
     if (!welcome_texture)
     {
         SDL_Log("Could not initialise texture. Reason: %s\n", SDL_GetError());
     }
-    const SDL_FRect title_rect = get_frect_centered(200, 200, 100, 100);
+
+    // Get rectangle
+    const SDL_FRect title_rect = get_frect_centered(32, 8, 20, 10);
 
     // Variables for getting user input
     bool typing = true;
@@ -95,20 +122,24 @@ int main(void)
 
     while (!quitting)
     {
-        SDL_RenderClear(welcome_renderer);
+        if (!SDL_RenderClear(welcome_renderer))
+        {
+            SDL_Log("Could not clear welcome renderer. Reason: %s\n", SDL_GetError());
+        }
 
         while (SDL_PollEvent(&event))
         {
             switch(event.type){
                 case SDL_EVENT_QUIT:
                     quitting = true;
+                    typing = false;
+
                     // Stop further text input
                     if (!SDL_StopTextInput(welcome_window))
                     {
                         SDL_Log("Could not end text input. Reason: %s\n", SDL_GetError());
                         return 1;
                     }
-                    typing = false;
                     break;
 
                 case SDL_EVENT_TEXT_INPUT:
@@ -132,17 +163,25 @@ int main(void)
                     }
                     break;
             }    
-
-            if (!SDL_RenderPresent(welcome_renderer))
-            {
-                SDL_Log("Could not render present on welcome screen. Reason: %s\n", SDL_GetError());
-            }
         }
 
-        // Rendering texture
+        // White text box so users can see their keyboard input (only a border of a rect)
+        const SDL_FRect text_rect = {32, 16, 30, 5};
+        SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255);
+        SDL_RenderRect(welcome_renderer, &text_rect);
+        TTF_RenderText_Blended(text_font, input_string.input, input_string.length, text_color);
+
         if (!SDL_RenderTexture(welcome_renderer, welcome_texture, NULL, &title_rect))
         {
-            SDL_Log("Could not render title text on welcome screen. Reason: %s\n", SDL_GetError());
+            SDL_Log("Could not render title text (texture) on welcome screen. Reason: %s\n", SDL_GetError());
+        }
+        
+        // Reset colour to black
+        SDL_SetRenderDrawColor(welcome_renderer, 0, 0, 0, 255);
+
+        if (!SDL_RenderPresent(welcome_renderer))
+        {
+            SDL_Log("Could not render present on welcome screen. Reason: %s\n", SDL_GetError());
         }
 
         if (quitting)
@@ -164,35 +203,8 @@ int main(void)
         } 
     }
 
-    // <----- QUIRKS ----->
-    // CHIP-8 has ambigious instructions so there are settings to adjust quirks
-
-    // 8XY1, 8XY2, 8XY3 reset registers[0xF] to 0
-    bool QUIRK_RESET_VF = false;     
-    
-     // FX55 and FX65 incrementing index register
-    bool QUIRK_MEMORY = false; 
-
-    // DXYN only called once per frame 
-    bool QUIRK_DISPLAY_WAIT = false; 
-
-    // Sprites get clipped instead of wrapping in DXYN
-    bool QUIRK_CLIPPING = false;
-
-    // 8XY6 and 8XYE only operate on VX instead of storing shifted VY in VX
-    bool QUIRK_SHIFTING = true; 
-
-    // BNNN doesn't use V0, but VX instead (X is first nibble in NNN)
-    bool QUIRK_JUMPING = false;
-
-    // FX1E sets VF to 0 if the index registers overflow
-    bool QUIRK_FX1E_OVERFLOW_FLAG = true;
-
-    // FX0A resumes execution if the key is both pressed and released or simply pressed
-    bool QUIRK_FX0A_PRESSED_AND_RELEASED = true;
-
     // Open file (for loading ROM data into memory)
-    FILE *ROM_file = fopen(file_name, "r");
+    FILE *ROM_file = fopen(input_string.input, "r");
     if (ROM_file == NULL)
     {
         SDL_Log("Could not open file (NULL).\n");
@@ -277,7 +289,7 @@ int main(void)
     quitting = false;
     bool DXYN_PAUSED = false;
 
-    // Add a small delay
+    // Add a small delay before opening emulator
     SDL_Delay(300);
 
     while (!quitting)
