@@ -166,10 +166,17 @@ int main(void)
         }
 
         // White text box so users can see their keyboard input (only a border of a rect)
+        const float text_font_size = 120;
+        TTF_Font *text_font = TTF_OpenFont("jetbrains_mono.ttf", text_font_size);
+        if (!font)
+        {
+            SDL_Log("Could not initialise text font. Reason: %s\n", SDL_GetError());
+        }
+
         const SDL_FRect text_rect = {32, 16, 30, 5};
         SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255);
         SDL_RenderRect(welcome_renderer, &text_rect);
-        TTF_RenderText_Blended(text_font, input_string.input, input_string.length, text_color);
+        TTF_RenderText_Blended(text_font, input_string.input, input_string.length, font_color);
 
         if (!SDL_RenderTexture(welcome_renderer, welcome_texture, NULL, &title_rect))
         {
