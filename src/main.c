@@ -44,20 +44,17 @@ int main(void)
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
     {
         SDL_Log("SDL video/audio initialisation failed! Reason: %s\n", SDL_GetError());
-        return 1;
     }
 
     SDL_Window* welcome_window = SDL_CreateWindow("CHIP-8", WIDTH * SCALE, HEIGHT * SCALE, 0);
     if (welcome_window == NULL)
     {
         SDL_Log("Window creation failed. Reason: %s\n", SDL_GetError());
-        return 1;
     }
 
     SDL_Renderer* welcome_renderer = SDL_CreateRenderer(welcome_window, NULL);
     if (welcome_renderer == NULL){
         SDL_Log("Renderer creation failed. Reason: %s\n", SDL_GetError());
-        return 1;
     }
 
     // Allow renderer to adjust to window size (adjusted by scale factor)
@@ -66,14 +63,12 @@ int main(void)
     if (!SDL_StartTextInput(welcome_window))
     {
         SDL_Log("Could not get text input. Reason: %s\n", SDL_GetError());
-        return 1;
     }
 
     // Initialise TTF
     if (!TTF_Init())
     {
         SDL_Log("Could not initialise TTF. Reason: %s\n", SDL_GetError());
-        return 1;
     }
 
     // Font settings for title (white color, completely solid)
@@ -82,34 +77,6 @@ int main(void)
     font_color.g = 255;
     font_color.b = 255;
     font_color.a = 255;
-
-    // Initialising font
-    const float title_font_size = 120; // Higher font size so text is less pixelated
-    TTF_Font *font = TTF_OpenFont("bold_font.ttf", title_font_size);
-    if (!font)
-    {
-        SDL_Log("Could not initialise font. Reason: %s\n", SDL_GetError());
-        return 1;
-    }
-
-    // Initialising surface
-    char *welcome_text = "CHIP-8";
-    SDL_Surface *welcome_surface = TTF_RenderText_Blended(font, welcome_text, strlen(welcome_text), font_color);
-    if (!welcome_surface)
-    {
-        SDL_Log("Could not initialise surface. Reason: %s\n", SDL_GetError());
-        return 1;
-    }
-
-    // Initialsing texture
-    SDL_Texture *welcome_texture = SDL_CreateTextureFromSurface(welcome_renderer, welcome_surface);
-    if (!welcome_texture)
-    {
-        SDL_Log("Could not initialise texture. Reason: %s\n", SDL_GetError());
-    }
-
-    // Get rectangle
-    const SDL_FRect title_rect = get_frect_centered(32, 8, 20, 10);
 
     // Variables for getting user input
     bool typing = true;
@@ -120,8 +87,61 @@ int main(void)
     SDL_Event event;
     SDL_zero(event);
 
+    // Initialising font for title
+    const float title_font_size = 120; // Higher font size so text is less pixelated
+    TTF_Font *font = TTF_OpenFont("bold_font.ttf", title_font_size);
+    if (!font)
+    {
+        SDL_Log("Could not initialise font. Reason: %s\n", SDL_GetError());
+    }
+
+    // White text box so users can see their keyboard input (only a border of a rect)
+    const float text_font_size = 120;
+    TTF_Font *text_font = TTF_OpenFont("jetbrains_mono.ttf", text_font_size);
+    if (!font)
+    {
+        SDL_Log("Could not initialise text font. Reason: %s\n", SDL_GetError());
+    }
+
+    // Initialising surface for title
+    char *welcome_text = "CHIP-8";
+    SDL_Surface *welcome_surface = TTF_RenderText_Blended(font, welcome_text, strlen(welcome_text), font_color);
+    if (!welcome_surface)
+    {
+        SDL_Log("Could not initialise surface. Reason: %s\n", SDL_GetError());
+    }
+
+    // Initialising surface for input
+    char *initial_text_input = "ROM file name";
+    SDL_Surface *welcome_surface_input = TTF_RenderText_Blended(text_font, initial_text_input, strlen(initial_text_input), font_color);
+    if (!welcome_surface_input)
+    {
+        SDL_Log("Could not initialise surface. Reason: %s\n", SDL_GetError());
+    }
+
+    // Initialsing texture for title
+    SDL_Texture *welcome_texture = SDL_CreateTextureFromSurface(welcome_renderer, welcome_surface);
+    if (!welcome_texture)
+    {
+        SDL_Log("Could not initialise texture. Reason: %s\n", SDL_GetError());
+    }
+
+    // Initialising texture for input
+    SDL_Texture *welcome_texture_input = SDL_CreateTextureFromSurface(welcome_renderer, welcome_surface_input);
+    if (!welcome_texture_input)
+    {
+        SDL_Log("Could not initialise texture. Reason: %s\n", SDL_GetError());
+    }
+
+    // Get rectangles for rendering text
+    const SDL_FRect title_rect = get_frect_centered(32, 8, 20, 10);
+    const SDL_FRect text_rect = get_frect_centered(32, 16, 30, 7);
+
     while (!quitting)
     {
+        // Reset colour to black before clearing
+        SDL_SetRenderDrawColor(welcome_renderer, 0, 0, 0, 255);
+
         if (!SDL_RenderClear(welcome_renderer))
         {
             SDL_Log("Could not clear welcome renderer. Reason: %s\n", SDL_GetError());
@@ -138,7 +158,6 @@ int main(void)
                     if (!SDL_StopTextInput(welcome_window))
                     {
                         SDL_Log("Could not end text input. Reason: %s\n", SDL_GetError());
-                        return 1;
                     }
                     break;
 
@@ -165,27 +184,23 @@ int main(void)
             }    
         }
 
-        // White text box so users can see their keyboard input (only a border of a rect)
-        const float text_font_size = 120;
-        TTF_Font *text_font = TTF_OpenFont("jetbrains_mono.ttf", text_font_size);
-        if (!font)
-        {
-            SDL_Log("Could not initialise text font. Reason: %s\n", SDL_GetError());
-        }
-
-        const SDL_FRect text_rect = {32, 16, 30, 5};
-        SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255);
+        // Render input text
+        SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255); // Set renderer to white
         SDL_RenderRect(welcome_renderer, &text_rect);
         TTF_RenderText_Blended(text_font, input_string.input, input_string.length, font_color);
 
+        // Render texture for input text
+        if (!SDL_RenderTexture(welcome_renderer, welcome_texture_input, NULL, &text_rect))
+        {
+            SDL_Log("Could not render input text. Reason: %s\n", SDL_GetError());
+        }
+
+        // Render title
         if (!SDL_RenderTexture(welcome_renderer, welcome_texture, NULL, &title_rect))
         {
             SDL_Log("Could not render title text (texture) on welcome screen. Reason: %s\n", SDL_GetError());
         }
         
-        // Reset colour to black
-        SDL_SetRenderDrawColor(welcome_renderer, 0, 0, 0, 255);
-
         if (!SDL_RenderPresent(welcome_renderer))
         {
             SDL_Log("Could not render present on welcome screen. Reason: %s\n", SDL_GetError());
@@ -215,7 +230,6 @@ int main(void)
     if (ROM_file == NULL)
     {
         SDL_Log("Could not open file (NULL).\n");
-        return 1;
     }
 
     // Determine size of file
@@ -226,7 +240,6 @@ int main(void)
     if (size > (4096 - 0x200))
     {
         SDL_Log("File is too large (memory exceeded).\n");
-        return 1;
     }
 
     // Read file into memory starting at index 0x200
@@ -265,13 +278,11 @@ int main(void)
     if (window == NULL)
     {
         SDL_Log("Window creation failed. \nReason: %s\n", SDL_GetError());
-        return 1;
     }
 
     SDL_Renderer* renderer = SDL_CreateRenderer(window, NULL);
     if (renderer == NULL){
         SDL_Log("Renderer creation failed. \nReason: %s\n", SDL_GetError());
-        return 1;
     }
 
     // Allow renderer to adjust to window size (adjusted by scale factor)
@@ -394,7 +405,6 @@ int main(void)
             if (!stream)
             {
                 SDL_Log("Couldn't create audio stream. Reason: %s\n", SDL_GetError());
-                return 1;
             }
             SDL_ResumeAudioStreamDevice(stream);  
             
@@ -456,7 +466,6 @@ int main(void)
             if (ex_keyboard == NULL)
             {
                 SDL_Log("Keyboard is NULL. Reason: %s\n", SDL_GetError());
-                return 1;
             }
             SDL_Scancode ex_scancode = keypad[keyboard_to_index(curr_key)].scancode;
 
