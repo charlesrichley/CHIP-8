@@ -51,7 +51,7 @@ int main(void)
         return 1;
     }
 
-    // Font settings for title
+    // Font settings for title (white color, completely solid)
     SDL_Color font_color;
     font_color.r = 255;
     font_color.g = 255;
@@ -68,7 +68,8 @@ int main(void)
     }
 
     // Initialising surface
-    SDL_Surface *welcome_surface = TTF_RenderText_Blended(font, "CHIP-8", sizeof("CHIP-8") - 1, font_color);
+    char *welcome_text = "CHIP-8";
+    SDL_Surface *welcome_surface = TTF_RenderText_Blended(font, welcome_text, sizeof(welcome_text) - sizeof('\0'), font_color);
     if (!welcome_surface)
     {
         SDL_Log("Could not initialise surface. Reason: %s\n", SDL_GetError());
@@ -81,20 +82,9 @@ int main(void)
     {
         SDL_Log("Could not initialise texture. Reason: %s\n", SDL_GetError());
     }
-    const SDL_FRect title_rect = get_frect_centered(100, 100, 100, 100);
+    const SDL_FRect title_rect = get_frect_centered(200, 200, 100, 100);
 
-    // Rendering texture
-    if (!SDL_RenderTexture(welcome_renderer, welcome_texture, NULL, &title_rect))
-    {
-        SDL_Log("Could not render title text. Reason: %s\n", SDL_GetError());
-    }
-
-    if (!SDL_RenderPresent(welcome_renderer))
-    {
-        SDL_Log("Could not update renderer for welcome screen. Reason: %s\n", SDL_GetError());
-    }
-
-    // Get user input
+    // Variables for getting user input
     bool typing = true;
     bool quitting = false;
     Input_String input_string;
@@ -105,6 +95,8 @@ int main(void)
 
     while (!quitting)
     {
+        SDL_RenderClear(welcome_renderer);
+
         while (SDL_PollEvent(&event))
         {
             switch(event.type){
@@ -120,6 +112,7 @@ int main(void)
                     break;
 
                 case SDL_EVENT_TEXT_INPUT:
+                    // User is inputting text (for the file name for ROM)
                     if (typing)
                     {
                         strcat(input_string.input, event.text.text);
@@ -129,7 +122,8 @@ int main(void)
                 
                 case SDL_EVENT_KEY_DOWN:
                     if (typing)
-                    {  
+                    {   
+                        // User is deleting text input  
                         if ((event.key.key == SDLK_BACKSPACE) && strcmp(input_string.input, "") != 0)  
                         {
                             input_string.input[input_string.length - 1] = '\0';
@@ -137,7 +131,18 @@ int main(void)
                         }
                     }
                     break;
+            }    
+
+            if (!SDL_RenderPresent(welcome_renderer))
+            {
+                SDL_Log("Could not render present on welcome screen. Reason: %s\n", SDL_GetError());
             }
+        }
+
+        // Rendering texture
+        if (!SDL_RenderTexture(welcome_renderer, welcome_texture, NULL, &title_rect))
+        {
+            SDL_Log("Could not render title text on welcome screen. Reason: %s\n", SDL_GetError());
         }
 
         if (quitting)
@@ -156,10 +161,11 @@ int main(void)
             font = NULL;
 
             break;
-        }
+        } 
     }
 
-    // QUIRKS: CHIP-8 has ambigious instructions so there are settings to adjust quirks
+    // <----- QUIRKS ----->
+    // CHIP-8 has ambigious instructions so there are settings to adjust quirks
 
     // 8XY1, 8XY2, 8XY3 reset registers[0xF] to 0
     bool QUIRK_RESET_VF = false;     
@@ -176,7 +182,7 @@ int main(void)
     // 8XY6 and 8XYE only operate on VX instead of storing shifted VY in VX
     bool QUIRK_SHIFTING = true; 
 
-    // BNNN doesn't use v0, but vX instead (X is first nibble in NNN)
+    // BNNN doesn't use V0, but VX instead (X is first nibble in NNN)
     bool QUIRK_JUMPING = false;
 
     // FX1E sets VF to 0 if the index registers overflow
@@ -270,12 +276,17 @@ int main(void)
     const float target_frame_time = 1000 / 60;  // 60 FPS, so 0.017 seconds per frame.
     quitting = false;
     bool DXYN_PAUSED = false;
+
+    // Add a small delay
     SDL_Delay(300);
 
     while (!quitting)
     {
         uint64_t frame_start = SDL_GetTicksNS();
-        SDL_RenderClear(renderer);
+        if (!SDL_RenderClear(renderer))
+        {
+            SDL_Log("Could not clear renderer during main loop. Reason: %s\n", SDL_GetError());
+        }
 
         while (SDL_PollEvent(&event))
         {
