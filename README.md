@@ -6,3 +6,7 @@ I am currently developing a CHIP-8 emulator in C (_**work in progress**_).
 
 ### Games archive
 https://johnearnest.github.io/chip8Archive/?sort=platform
+
+### Octo
+https://johnearnest.github.io/Octo/docs/BeginnersGuide.html?utm_source=chatgpt.com
+https://johnearnest.github.io/Octo/
