@@ -130,7 +130,7 @@ int main(void)
     // Initialise input surfaces and textures
     SDL_Surface *welcome_surface_input;
     SDL_Texture *welcome_texture_input;
-    char *initial_text_input = "ROM file name";
+    const char *initial_text_input = "ROM file name";
 
     while (!quitting)
     {
@@ -211,7 +211,7 @@ int main(void)
         }
 
         // Render border for text box
-        SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255); // Set renderer to white
+        SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255); 
         SDL_RenderRect(welcome_renderer, &box_rect);
 
         // Render texture for input text
