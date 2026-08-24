@@ -16,31 +16,39 @@ int main(void)
     // The defaults are the most standard ones that will allow most games to run
 
     // There are 8 quirks - we initialise an array to store them
-    Quirks quirks[NUMBER_OF_QUIRKS];
+    Quirk quirks[NUMBER_OF_QUIRKS];
 
     // 8XY1, 8XY2, 8XY3 reset registers[0xF] to 0
-    bool QUIRK_RESET_VF = false;     
+    quirks[0].quirk = "RESET_VF";
+    quirks[0].is_on = false;   
     
      // FX55 and FX65 incrementing index register
-    bool QUIRK_MEMORY = false; 
+    quirks[1].quirk = "MEMORY";
+    quirks[1].is_on = false;   
 
     // DXYN only called once per frame 
-    bool QUIRK_DISPLAY_WAIT = false; 
+    quirks[2].quirk = "DISPLAY_WAIT";
+    quirks[2].is_on = false;
 
     // Sprites get clipped instead of wrapping in DXYN
-    bool QUIRK_CLIPPING = false;
+    quirks[3].quirk = "CLIPPING";
+    quirks[3].is_on = false;
 
     // 8XY6 and 8XYE only operate on VX instead of storing shifted VY in VX
-    bool QUIRK_SHIFTING = true; 
+    quirks[4].quirk = "SHIFTING";
+    quirks[4].is_on = true;
 
     // BNNN doesn't use V0, but VX instead (X is first nibble in NNN)
-    bool QUIRK_JUMPING = false;
+    quirks[5].quirk = "JUMPING";
+    quirks[5].is_on = false;
 
     // FX1E sets VF to 0 if the index registers overflow
-    bool QUIRK_FX1E_OVERFLOW_FLAG = true;
+    quirks[6].quirk = "FX1E_OVERFLOW";
+    quirks[6].is_on = true;
 
     // FX0A resumes execution if the key is both pressed and released or simply pressed
-    bool QUIRK_FX0A_PRESSED_AND_RELEASED = true;
+    quirks[7].quirk = "FX0A_PRESSED_AND_RELEASED";
+    quirks[7].is_on = true;
 
     // Initialise SDL
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
