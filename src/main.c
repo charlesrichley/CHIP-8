@@ -79,6 +79,7 @@ int main(void)
     font_color.a = 255;
 
     // Variables for getting user input
+    bool has_changed = true; // Set to true initially so textures get initialised
     bool typing = true;
     bool quitting = false;
     Input_String input_string;
@@ -111,14 +112,6 @@ int main(void)
         SDL_Log("Could not initialise surface. Reason: %s\n", SDL_GetError());
     }
 
-    // Initialising surface for input
-    char *initial_text_input = "ROM file name";
-    SDL_Surface *welcome_surface_input = TTF_RenderText_Blended(text_font, initial_text_input, strlen(initial_text_input), font_color);
-    if (!welcome_surface_input)
-    {
-        SDL_Log("Could not initialise surface. Reason: %s\n", SDL_GetError());
-    }
-
     // Initialsing texture for title
     SDL_Texture *welcome_texture = SDL_CreateTextureFromSurface(welcome_renderer, welcome_surface);
     if (!welcome_texture)
@@ -126,20 +119,18 @@ int main(void)
         SDL_Log("Could not initialise texture. Reason: %s\n", SDL_GetError());
     }
 
-    // Initialising texture for input
-    SDL_Texture *welcome_texture_input = SDL_CreateTextureFromSurface(welcome_renderer, welcome_surface_input);
-    if (!welcome_texture_input)
-    {
-        SDL_Log("Could not initialise texture. Reason: %s\n", SDL_GetError());
-    }
-
     // Get rectangles for rendering text
     const SDL_FRect title_rect = get_frect_centered(32, 8, 20, 10);
-    const SDL_FRect text_rect = get_frect_centered(32, 16, 30, 7);
+    const SDL_FRect text_rect = get_frect_centered(32, 16, 30, 8);
+
+    // Initialise input surfaces and textures
+    SDL_Surface *welcome_surface_input;
+    SDL_Texture *welcome_texture_input;
+    char *initial_text_input = "ROM file name";
 
     while (!quitting)
     {
-        // Reset colour to black before clearing
+        // Reset colour to black before clearing for black background
         SDL_SetRenderDrawColor(welcome_renderer, 0, 0, 0, 255);
 
         if (!SDL_RenderClear(welcome_renderer))
@@ -167,6 +158,7 @@ int main(void)
                     {
                         strcat(input_string.input, event.text.text);
                         input_string.length++;
+                        has_changed = true;
                     }
                     break;
                 
@@ -178,16 +170,37 @@ int main(void)
                         {
                             input_string.input[input_string.length - 1] = '\0';
                             input_string.length--;
+                            has_changed = true;
                         }
                     }
                     break;
             }    
         }
 
-        // Render input text
+        if (has_changed == true)
+        {
+            // Render input text
+            SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255); // Set renderer to white
+            TTF_RenderText_Blended(text_font, input_string.input, input_string.length, font_color);
+
+            // Initialising surface for input
+            welcome_surface_input = TTF_RenderText_Blended(text_font, initial_text_input, strlen(initial_text_input), font_color);
+            if (!welcome_surface_input)
+            {
+                SDL_Log("Could not initialise surface. Reason: %s\n", SDL_GetError());
+            }
+
+            // Initialising texture for input
+            welcome_texture_input = SDL_CreateTextureFromSurface(welcome_renderer, welcome_surface_input);
+            if (!welcome_texture_input)
+            {
+                SDL_Log("Could not initialise texture. Reason: %s\n", SDL_GetError());
+            }
+        }
+
+        // Render border for text box
         SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255); // Set renderer to white
         SDL_RenderRect(welcome_renderer, &text_rect);
-        TTF_RenderText_Blended(text_font, input_string.input, input_string.length, font_color);
 
         // Render texture for input text
         if (!SDL_RenderTexture(welcome_renderer, welcome_texture_input, NULL, &text_rect))
@@ -195,12 +208,13 @@ int main(void)
             SDL_Log("Could not render input text. Reason: %s\n", SDL_GetError());
         }
 
-        // Render title
+        // Render texture for title text
         if (!SDL_RenderTexture(welcome_renderer, welcome_texture, NULL, &title_rect))
         {
             SDL_Log("Could not render title text (texture) on welcome screen. Reason: %s\n", SDL_GetError());
         }
         
+        // Render present 
         if (!SDL_RenderPresent(welcome_renderer))
         {
             SDL_Log("Could not render present on welcome screen. Reason: %s\n", SDL_GetError());
@@ -222,7 +236,10 @@ int main(void)
             font = NULL;
 
             break;
-        } 
+        }
+        
+        // Reset has_changed
+        has_changed = false;
     }
 
     // Open file (for loading ROM data into memory)
