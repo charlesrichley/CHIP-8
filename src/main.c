@@ -16,39 +16,31 @@ int main(void)
     // The defaults are the most standard ones that will allow most games to run
 
     // There are 8 quirks - we initialise an array to store them
-    Quirk quirks[NUMBER_OF_QUIRKS];
+    bool quirks[NUMBER_OF_QUIRKS];
 
     // 8XY1, 8XY2, 8XY3 reset registers[0xF] to 0
-    quirks[0].quirk = "RESET_VF";
-    quirks[0].is_on = false;   
+    quirks[RESET_VF] = false;
     
-     // FX55 and FX65 incrementing index register
-    quirks[1].quirk = "MEMORY";
-    quirks[1].is_on = false;   
+    // FX55 and FX65 incrementing index register
+    quirks[MEMORY] = false;
 
     // DXYN only called once per frame 
-    quirks[2].quirk = "DISPLAY_WAIT";
-    quirks[2].is_on = false;
+    quirks[DISPLAY_WAIT] = false;
 
     // Sprites get clipped instead of wrapping in DXYN
-    quirks[3].quirk = "CLIPPING";
-    quirks[3].is_on = false;
+    quirks[CLIPPING] = false;
 
     // 8XY6 and 8XYE only operate on VX instead of storing shifted VY in VX
-    quirks[4].quirk = "SHIFTING";
-    quirks[4].is_on = true;
+    quirks[SHIFTING] = true;
 
     // BNNN doesn't use V0, but VX instead (X is first nibble in NNN)
-    quirks[5].quirk = "JUMPING";
-    quirks[5].is_on = false;
+    quirks[JUMPING] = false;
 
     // FX1E sets VF to 0 if the index registers overflow
-    quirks[6].quirk = "FX1E_OVERFLOW";
-    quirks[6].is_on = true;
+    quirks[FX1E_OVERFLOW] = true;
 
     // FX0A resumes execution if the key is both pressed and released or simply pressed
-    quirks[7].quirk = "FX0A_PRESSED_AND_RELEASED";
-    quirks[7].is_on = true;
+    quirks[FX0A_PRESSED_AND_RELEASED] = true;
 
     // Initialise SDL
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
@@ -370,7 +362,7 @@ int main(void)
                         int index_key_down = scancode_to_index(keypad, event_scancode);
 
                         // Key only has to be pressed for execution to resume
-                        if (!QUIRK_FX0A_PRESSED_AND_RELEASED)
+                        if (!quirks[FX0A_PRESSED_AND_RELEASED])
                         {
                             fx0a_completed = true;
                             fx0a_waiting = false;
@@ -388,7 +380,7 @@ int main(void)
 
                 case SDL_EVENT_KEY_UP:
                 {
-                    if (fx0a_waiting && QUIRK_FX0A_PRESSED_AND_RELEASED)
+                    if (fx0a_waiting && quirks[FX0A_PRESSED_AND_RELEASED])
                     {
                         SDL_Scancode event_scancode = event.key.scancode;
                         int index_key_up = scancode_to_index(keypad, event_scancode);
@@ -585,7 +577,7 @@ int main(void)
                         // 8XY1: binary OR
                         case 0x1:
                             registers[x] = orig_registers_x | orig_registers_y;
-                            if (QUIRK_RESET_VF)
+                            if (quirks[RESET_VF])
                             {
                                 registers[0xF] = 0;
                             }
@@ -594,7 +586,7 @@ int main(void)
                         // 8XY2: binary AND
                         case 0x2:
                             registers[x] = registers[x] & registers[y];
-                            if (QUIRK_RESET_VF)
+                            if (quirks[RESET_VF])
                             {
                                 registers[0xF] = 0;
                             }
@@ -603,7 +595,7 @@ int main(void)
                         // 8XY3: bitwise XOR
                         case 0x3:
                             registers[x] = registers[x] ^ registers[y];
-                            if (QUIRK_RESET_VF)
+                            if (quirks[RESET_VF])
                             {
                                 registers[0xF] = 0;
                             }
@@ -643,7 +635,7 @@ int main(void)
                         
                         // 8XY6 and 8XYE: shift 
                         case 0x6: {
-                            if (!QUIRK_SHIFTING)
+                            if (!quirks[SHIFTING])
                             {
                                 registers[x] = registers[y]; 
                             }
@@ -668,7 +660,7 @@ int main(void)
 
                         // 8XYE: shift (ambigious instruction)
                         case 0xE: {
-                            if (!QUIRK_SHIFTING)
+                            if (!quirks[SHIFTING])
                             {
                                 registers[x] = registers[y]; 
                             }
@@ -701,7 +693,7 @@ int main(void)
 
                     // CHIP-8 and SUPER-CHIP change BXNN (could be accidentally)
                     // Where pc jumps to XNN + registers[x]
-                    if (QUIRK_JUMPING)
+                    if (quirks[JUMPING])
                     {
                         pc = (((x << 8) | NN)) + registers[x];
                     }
@@ -728,7 +720,7 @@ int main(void)
                     {
                         if (y_coord >= HEIGHT || y_coord < 0)
                         {
-                            if (QUIRK_CLIPPING)
+                            if (quirks[CLIPPING])
                             {
                                 break;
                             }
@@ -746,7 +738,7 @@ int main(void)
                         {
                             if (x_coord >= WIDTH || x_coord < 0)
                             {
-                                if (QUIRK_CLIPPING)
+                                if (quirks[CLIPPING])
                                 {
                                     break;
                                 }
@@ -774,7 +766,7 @@ int main(void)
                         y_coord += 1;
                     }
                     
-                    if (QUIRK_DISPLAY_WAIT)
+                    if (quirks[DISPLAY_WAIT])
                     {
                         DXYN_PAUSED = true;
                     }
@@ -821,7 +813,7 @@ int main(void)
                                     {
                                         memory[index_register + i] = registers[i];
                                     }
-                                    if (QUIRK_MEMORY)
+                                    if (quirks[MEMORY])
                                     {
                                         index_register+= (x + 1);
                                     }
@@ -833,7 +825,7 @@ int main(void)
                                     {
                                         registers[i] = memory[index_register + i];
                                     }
-                                    if (QUIRK_MEMORY)
+                                    if (quirks[MEMORY])
                                     {
                                         index_register+= (x + 1);
                                     }
@@ -852,7 +844,7 @@ int main(void)
 
                             // On original COSMAC VIP, VF was not affected on overflow
                             // However, CHIP-8 interpreter for Amiga would set VF to 1 on overflow
-                            if (QUIRK_FX1E_OVERFLOW_FLAG)
+                            if (quirks[FX1E_OVERFLOW])
                                 if (index_register > 0x0FFF)
                                 {
                                     registers[0xF] = 1;
@@ -913,7 +905,7 @@ int main(void)
         }
 
         // Reset DXYN_PAUSED at end of loop
-        if (QUIRK_DISPLAY_WAIT)
+        if (quirks[DISPLAY_WAIT])
         {
             DXYN_PAUSED = false;
         }
