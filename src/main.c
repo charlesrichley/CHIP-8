@@ -97,7 +97,7 @@ int main(void)
     }
 
     // White text box so users can see their keyboard input (only a border of a rect)
-    const float text_font_size = 120;
+    const float text_font_size = 200;
     TTF_Font *text_font = TTF_OpenFont("jetbrains_mono.ttf", text_font_size);
     if (!font)
     {
@@ -121,7 +121,8 @@ int main(void)
 
     // Get rectangles for rendering text
     const SDL_FRect title_rect = get_frect_centered(32, 8, 20, 10);
-    const SDL_FRect text_rect = get_frect_centered(32, 16, 30, 8);
+    const SDL_FRect box_rect = get_frect_centered(32, 16, 30, 8);
+    const SDL_FRect input_rect = get_frect_centered(32, 16, 25, 7);
 
     // Initialise input surfaces and textures
     SDL_Surface *welcome_surface_input;
@@ -184,7 +185,15 @@ int main(void)
             TTF_RenderText_Blended(text_font, input_string.input, input_string.length, font_color);
 
             // Initialising surface for input
-            welcome_surface_input = TTF_RenderText_Blended(text_font, initial_text_input, strlen(initial_text_input), font_color);
+            if (input_string.length == 0)
+            {
+                welcome_surface_input = TTF_RenderText_Blended(text_font, initial_text_input, strlen(initial_text_input), font_color);   
+            }
+            else
+            {
+                welcome_surface_input = TTF_RenderText_Blended(text_font, input_string.input, input_string.length, font_color);   
+            }
+
             if (!welcome_surface_input)
             {
                 SDL_Log("Could not initialise surface. Reason: %s\n", SDL_GetError());
@@ -200,10 +209,10 @@ int main(void)
 
         // Render border for text box
         SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255); // Set renderer to white
-        SDL_RenderRect(welcome_renderer, &text_rect);
+        SDL_RenderRect(welcome_renderer, &box_rect);
 
         // Render texture for input text
-        if (!SDL_RenderTexture(welcome_renderer, welcome_texture_input, NULL, &text_rect))
+        if (!SDL_RenderTexture(welcome_renderer, welcome_texture_input, NULL, &input_rect))
         {
             SDL_Log("Could not render input text. Reason: %s\n", SDL_GetError());
         }
