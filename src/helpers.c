@@ -61,7 +61,7 @@ void pixels_on(uint8_t pixels[WIDTH][HEIGHT])
     }
 }
 
-// Returns rectangle at coordinates top left at (i,j) width w and height h
+// Returns rectangle with top left at coordinates (i,j) width w and height h
 SDL_FRect get_frect_TL(int i, int j, int w, int h)
 {
     SDL_FRect rect;
@@ -109,6 +109,7 @@ int keyboard_to_chip_8(int keyboard)
     return -1;
 }
 
+// Given keyboard key return index
 int keyboard_to_index(char c)
 {
     for (int i = 0; i < 16; i++)
