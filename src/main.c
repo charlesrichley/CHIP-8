@@ -17,31 +17,41 @@ int main(void)
 
     // There are 8 quirks - we initialise an array to store them
     bool quirks[NUMBER_OF_QUIRKS];
+    char *quirk_strings[NUMBER_OF_QUIRKS];
+    Button buttons[NUMBER_OF_QUIRKS];
 
     // 8XY1, 8XY2, 8XY3 reset registers[0xF] to 0
     quirks[RESET_VF] = false;
+    quirk_strings[RESET_VF] = "VF RESET";
     
     // FX55 and FX65 incrementing index register
     quirks[MEMORY] = false;
+    quirk_strings[MEMORY] = "MEMORY";
 
     // DXYN only called once per frame 
     quirks[DISPLAY_WAIT] = false;
+    quirk_strings[DISPLAY_WAIT] = "DISPLAY WAIT";
 
     // Sprites get clipped instead of wrapping in DXYN
     quirks[CLIPPING] = false;
+    quirk_strings[CLIPPING] = "CLIPPING";
 
     // 8XY6 and 8XYE only operate on VX instead of storing shifted VY in VX
     quirks[SHIFTING] = true;
+    quirk_strings[SHIFTING] = "SHIFTING";
 
     // BNNN doesn't use V0, but VX instead (X is first nibble in NNN)
     quirks[JUMPING] = false;
+    quirk_strings[JUMPING] = "JUMPING";
 
     // FX1E sets VF to 0 if the index registers overflow
     quirks[FX1E_OVERFLOW] = true;
+    quirk_strings[FX1E_OVERFLOW] = "OVERFLOW";
 
     // FX0A resumes execution if the key is both pressed and released or simply pressed
     quirks[FX0A_PRESSED_AND_RELEASED] = true;
-
+    quirk_strings[FX0A_PRESSED_AND_RELEASED] = "PRESSED";
+    
     // Initialise SDL
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
     {
@@ -131,6 +141,12 @@ int main(void)
     SDL_Surface *welcome_surface_input;
     SDL_Texture *welcome_texture_input;
     const char *initial_text_input = "ROM file name";
+
+    // Initialise buttons
+    for (int i = 0; i < NUMBER_OF_QUIRKS; i++)
+    {
+        buttons[i].string = quirk_strings[i];
+    }
 
     while (!quitting)
     {
