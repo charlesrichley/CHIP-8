@@ -18,6 +18,7 @@
 #define INSRUCTIONS_PER_FRAME 12
 
 #define MAX_FILE_NAME_SIZE 2000
+#define NUMBER_OF_QUIRKS 8
 
 typedef struct 
 {
@@ -31,7 +32,6 @@ typedef struct
     char keyboard;
     SDL_Scancode scancode;
     bool is_down;
-
 } Keypad;
 
 typedef struct
@@ -39,6 +39,17 @@ typedef struct
     char input[MAX_FILE_NAME_SIZE];
     int length; 
 } Input_String;
+
+enum {
+    RESET_VF,
+    MEMORY,
+    DISPLAY_WAIT,
+    CLIPPING,
+    SHIFTING,
+    JUMPING,
+    FX1E_OVERFLOW,
+    FX0A_PRESSED_AND_RELEASED
+};
 
 extern int chip_8_arr[16];
 extern char keyboard_arr[16];
@@ -58,9 +69,3 @@ int keyboard_to_index(char c);
 int scancode_to_index(Keypad keypad[16], SDL_Scancode scancode);
 int chip_8_to_keyboard(int chip_8);
 int keyboard_to_chip_8(int keyboard);
-
-void print_memory(uint8_t memory[4096]);
-void print_keypad(Keypad keypad[16]);
-void print_chip_8_arr(int chip_8_arr[16]);
-void printNum(u_int16_t x);
-void print_pixels(uint8_t pixels[WIDTH][HEIGHT]);
