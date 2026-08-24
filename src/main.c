@@ -13,6 +13,10 @@ int main(void)
 {
     // <----- QUIRKS ----->
     // CHIP-8 has ambigious instructions so there are settings to adjust quirks
+    // The defaults are the most standard ones that will allow most games to run
+
+    // There are 8 quirks - we initialise an array to store them
+    Quirks quirks[NUMBER_OF_QUIRKS];
 
     // 8XY1, 8XY2, 8XY3 reset registers[0xF] to 0
     bool QUIRK_RESET_VF = false;     
@@ -38,14 +42,13 @@ int main(void)
     // FX0A resumes execution if the key is both pressed and released or simply pressed
     bool QUIRK_FX0A_PRESSED_AND_RELEASED = true;
 
-    // Open window for game and settings selection
-
     // Initialise SDL
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
     {
         SDL_Log("SDL video/audio initialisation failed! Reason: %s\n", SDL_GetError());
     }
 
+    // Open window for game and settings selection
     SDL_Window* welcome_window = SDL_CreateWindow("CHIP-8", WIDTH * SCALE, HEIGHT * SCALE, 0);
     if (welcome_window == NULL)
     {
