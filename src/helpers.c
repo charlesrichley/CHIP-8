@@ -22,12 +22,6 @@ uint8_t sprite_arr[80] = {0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
 0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
 0xF0, 0x80, 0xF0, 0x80, 0x80}; // F
 
-// Checks if a stack is empty 
-bool is_empty(Stack *stack)
-{
-    return (stack->top == -1);
-}
-
 // Initialises a stack
 void initialise(Stack *stack)
 {
@@ -49,35 +43,21 @@ int pop(Stack *stack)
     return popped_number;
 }
 
-// Turns every pixel on (sets value to 1)
-void pixels_on(uint8_t pixels[WIDTH][HEIGHT])
+// Returns rectangle at coordinates (i, j) width w height h
+SDL_FRect get_frect(int i, int j, int w, int h, bool is_centered)
 {
-    for (int i = 0; i < WIDTH; i++)
+    SDL_FRect rect;
+    if (is_centered == true)
     {
-        for (int j = 0; j < HEIGHT; j++)
-        {
-            pixels[i][j] = 1;
-        }
+        rect.x = i - w/2;
+        rect.y = j - h/2;
     }
-}
+    else 
+    {
+        rect.x = i;
+        rect.y = j;
+    }
 
-// Returns rectangle with top left at coordinates (i,j) width w and height h
-SDL_FRect get_frect_TL(int i, int j, int w, int h)
-{
-    SDL_FRect rect;
-    rect.x = i; 
-    rect.y = j;
-    rect.w = w;
-    rect.h = h;
-    return rect;
-}
-
-// Returns rectangle centered at coordinates (i, j) width w height h
-SDL_FRect get_frect_centered(int i, int j, int w, int h)
-{
-    SDL_FRect rect;
-    rect.x = i - w/2;
-    rect.y = j - h/2;
     rect.w = w;
     rect.h = h;
     return rect;
@@ -133,4 +113,35 @@ int scancode_to_index(Keypad keypad[16], SDL_Scancode scancode)
         }
     }
     return -1;
+}
+
+// <----- UI FUNCTIONS ----->
+
+// Surface -> Texture -> Render text
+Button get_button(int x, int y, char *string, bool is_on, TTF_Font *font, SDL_Color font_color, SDL_Renderer *renderer) 
+{
+    // Initialise button
+    Button button;
+
+    SDL_Surface *surface = TTF_RenderText_Blended(font, string, strlen(string), font_color);
+    if (!surface)
+    {
+        SDL_Log("Could not initialise surface. Reason: %s\n", SDL_GetError());
+    }
+
+    // Initialsing texture for title
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
+    if (!texture)
+    {
+        SDL_Log("Could not initialise texture. Reason: %s\n", SDL_GetError());
+    }
+
+    button.surface = surface;
+    button.texture = texture;
+    button.string = string;
+    button.is_on = is_on;
+    button.x = x;
+    button.y = y;
+
+    return button;
 }
