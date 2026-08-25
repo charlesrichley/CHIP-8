@@ -132,10 +132,14 @@ int main(void)
         SDL_Log("Could not initialise texture. Reason: %s\n", SDL_GetError());
     }
 
-    // Get rectangles for rendering text
-    const SDL_FRect title_rect = get_frect_centered(32, 8, 20, 10);
-    const SDL_FRect box_rect = get_frect_centered(32, 16, 30, 8);
-    const SDL_FRect input_rect = get_frect_centered(32, 16, 25, 7);
+    // Get rectangles for rendering title
+    const SDL_FRect title_rect = get_frect(32, 3, 20, 10, true);
+
+    // Get rectangles for rendering text input and text box
+    int input_x = 48;
+    int input_y = 10;
+    const SDL_FRect box_rect = get_frect(input_x, input_y, 30, 5, true);
+    const SDL_FRect input_rect = get_frect(input_x, input_y, 25, 5, true);
 
     // Initialise input surfaces and textures
     SDL_Surface *welcome_surface_input;
@@ -145,7 +149,9 @@ int main(void)
     // Initialise buttons
     for (int i = 0; i < NUMBER_OF_QUIRKS; i++)
     {
-        buttons[i].string = quirk_strings[i];
+        int x = 4; 
+        int y = 4;
+        buttons[i] = get_button(x, y, quirk_strings[i], quirks[i], font, font_color, welcome_renderer);
     }
 
     while (!quitting)
@@ -315,7 +321,7 @@ int main(void)
     {
         for (int j = 0; j < HEIGHT; j++)
         {
-            rects_arr[i][j] = get_frect_TL(i, j, 1, 1);
+            rects_arr[i][j] = get_frect(i, j, 1, 1, false);
         }
     }
 
