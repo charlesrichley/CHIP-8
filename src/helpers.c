@@ -118,7 +118,7 @@ int scancode_to_index(Keypad keypad[16], SDL_Scancode scancode)
 // <----- UI FUNCTIONS ----->
 
 // Surface -> Texture -> Render text
-Button get_button(int x, int y, char *string, bool is_on, TTF_Font *font, SDL_Color font_color, SDL_Renderer *renderer) 
+Button get_button(int x, int y, char *string, bool is_on, TTF_Font *font, SDL_Color font_color, SDL_Renderer *renderer, SDL_FRect rect)
 {
     // Initialise button
     Button button;
@@ -136,6 +136,7 @@ Button get_button(int x, int y, char *string, bool is_on, TTF_Font *font, SDL_Co
         SDL_Log("Could not initialise texture. Reason: %s\n", SDL_GetError());
     }
 
+    button.rect = rect;
     button.surface = surface;
     button.texture = texture;
     button.string = string;
