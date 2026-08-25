@@ -85,14 +85,14 @@ int main(void)
     }
 
     // Font settings for title (white color, completely solid)
-    SDL_Color font_color;
-    font_color.r = 255;
-    font_color.g = 255;
-    font_color.b = 255;
-    font_color.a = 255;
+    SDL_Color font_color = {255, 255, 255, 255};
+
+    // Font settings for buttons (green and red)
+    SDL_Color on_color = {0, 255, 0, 255};
+    SDL_Color off_color = {255, 0, 0, 255};
 
     // Variables for getting user input
-    bool has_changed = true; // Set to true initially so textures get initialised
+    bool has_changed = true; // Set to true initially so textures get initialised - in reference to string of user input being edited
     bool typing = true;
     bool quitting = false;
     Input_String input_string;
@@ -146,12 +146,32 @@ int main(void)
     SDL_Texture *welcome_texture_input;
     const char *initial_text_input = "ROM file name";
 
+    // Variables for drawing buttons
+    int x_start = 20;
+    int y_start = 20;
+    int button_width = 5;
+    int button_height = 3;
+    int row_number = 0;
+    int column_number = 0;
+    int x_buffer = 3;
+    int y_buffer = 3;
+
     // Initialise buttons
-    for (int i = 0; i < NUMBER_OF_QUIRKS; i++)
+    for (int i = 0; i < NUMBER_OF_QUIRKS; i++, column_number++)
     {
-        int x = 4; 
-        int y = 4;
-        buttons[i] = get_button(x, y, quirk_strings[i], quirks[i], font, font_color, welcome_renderer);
+        // We want 2 buttons in each horizontal row
+        if (i % 4 == 0 && i != 0)
+        {
+            row_number++;
+            column_number = 0;
+        }
+
+        int x = x_start + column_number * button_width + x_buffer * column_number;
+        int y = y_start + row_number * button_height + y_buffer * row_number;
+
+        SDL_FRect button_rect = get_frect(x, y, button_width, button_height, true);
+
+        buttons[i] = get_button(x, y, quirk_strings[i], quirks[i], font, font_color, welcome_renderer, button_rect);
     }
 
     while (!quitting)
@@ -203,8 +223,36 @@ int main(void)
             }    
         }
 
+        // Render buttons
+        for (int i = 0; i < NUMBER_OF_QUIRKS; i++, column_number++)
+        {
+            // Get rectangle for button
+            SDL_FRect button_rect = buttons[i].rect;
+            SDL_Color button_color;
+
+            // Choose colour for button (green = on, red = off)
+            if (buttons[i].is_on == true)
+            {
+                button_color = on_color;
+            }
+            else
+            {
+                button_color = off_color;
+            }
+            
+            // Render rectangle
+            SDL_SetRenderDrawColor(welcome_renderer, button_color.r, button_color.g, button_color.b, button_color.a);
+            SDL_RenderFillRect(welcome_renderer, &button_rect);
+
+            // Render text for button title
+            TTF_RenderText_Blended(text_font, quirk_strings[i], strlen(quirk_strings[i]), font_color);
+        }
+
         if (has_changed == true)
         {
+            SDL_DestroySurface(welcome_surface_input);
+            SDL_DestroyTexture(welcome_texture_input);
+            
             // Render input text
             SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255); // Set renderer to white
             TTF_RenderText_Blended(text_font, input_string.input, input_string.length, font_color);
