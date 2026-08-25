@@ -49,3 +49,15 @@ void print_pixels(uint8_t pixels[WIDTH][HEIGHT])
         }
     }
 }
+
+// Turns every pixel on (sets value to 1)
+void pixels_on(uint8_t pixels[WIDTH][HEIGHT])
+{
+    for (int i = 0; i < WIDTH; i++)
+    {
+        for (int j = 0; j < HEIGHT; j++)
+        {
+            pixels[i][j] = 1;
+        }
+    }
+}
