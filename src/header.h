@@ -21,6 +21,9 @@
 #define QUIRK
 #define NUMBER_OF_QUIRKS 8
 
+#define BUTTON_WIDTH 5
+#define BUTTON_HEIGHT 3
+
 typedef struct 
 {
     uint16_t arr[16];
@@ -45,7 +48,8 @@ typedef struct
 {
     SDL_Surface *surface;
     SDL_Texture *texture;
-    SDL_FRect rect;
+    SDL_FRect button_rect;
+    SDL_FRect text_rect;
     bool is_on;
     char *string;
     int x;
@@ -79,4 +83,4 @@ int scancode_to_index(Keypad keypad[16], SDL_Scancode scancode);
 int chip_8_to_keyboard(int chip_8);
 int keyboard_to_chip_8(int keyboard);
 
-Button get_button(int x, int y, char *string, bool is_on, TTF_Font *font, SDL_Color font_color, SDL_Renderer *renderer, SDL_FRect button_rect);
+Button get_button(int x, int y, char *string, bool is_on, TTF_Font *font, SDL_Color font_color, SDL_Renderer *renderer, SDL_FRect rect);
