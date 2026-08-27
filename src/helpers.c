@@ -136,7 +136,7 @@ Button get_button(int x, int y, char *string, bool is_on, TTF_Font *font, SDL_Co
         SDL_Log("Could not initialise texture. Reason: %s\n", SDL_GetError());
     }
 
-    button.rect = rect;
+    button.button_rect = rect;
     button.surface = surface;
     button.texture = texture;
     button.string = string;
