@@ -15,7 +15,7 @@ int main(void)
     // CHIP-8 has ambigious instructions so there are settings to adjust quirks
     // The defaults are the most standard ones that will allow most games to run
 
-    // There are 8 quirks - we initialise an array to store them
+    // There are 8 quirks - we initialise arrays to store their information
     bool quirks[NUMBER_OF_QUIRKS];
     char *quirk_strings[NUMBER_OF_QUIRKS];
     Button buttons[NUMBER_OF_QUIRKS];
@@ -149,8 +149,6 @@ int main(void)
     // Variables for drawing buttons
     int x_start = 20;
     int y_start = 20;
-    int button_width = 5;
-    int button_height = 3;
     int row_number = 0;
     int column_number = 0;
     int x_buffer = 3;
@@ -166,10 +164,10 @@ int main(void)
             column_number = 0;
         }
 
-        int x = x_start + column_number * button_width + x_buffer * column_number;
-        int y = y_start + row_number * button_height + y_buffer * row_number;
+        int x = x_start + column_number * BUTTON_WIDTH + x_buffer * column_number;
+        int y = y_start + row_number * BUTTON_HEIGHT + y_buffer * row_number;
 
-        SDL_FRect button_rect = get_frect(x, y, button_width, button_height, true);
+        SDL_FRect button_rect = get_frect(x, y, BUTTON_WIDTH, BUTTON_HEIGHT, true);
 
         buttons[i] = get_button(x, y, quirk_strings[i], quirks[i], font, font_color, welcome_renderer, button_rect);
     }
@@ -220,14 +218,52 @@ int main(void)
                         }
                     }
                     break;
+
+                case SDL_EVENT_MOUSE_BUTTON_DOWN: {
+                    float x_click;
+                    float y_click;
+
+                    if (!SDL_RenderCoordinatesFromWindow(welcome_renderer, event.button.x, event.button.y, &x_click, &y_click))
+                    {
+                        SDL_Log("Could not render coordinates from window. Reason: %s\n", SDL_GetError());
+                    }
+
+                    for (int i = 0; i < NUMBER_OF_QUIRKS; i++)
+                    {
+                        // Check which button is being pressed
+                        if (fabsf(((float)buttons[i].x - x_click)) < (BUTTON_WIDTH / 2) && fabsf((float)buttons[i].y - y_click) < (BUTTON_HEIGHT / 2))
+                        {
+                            // Invert buttons[i] boolean value
+                            buttons[i].is_on = !buttons[i].is_on;
+                        }
+                    }
+                    break;
+                }
             }    
+        }
+
+        // User quits the welcome screen
+        if (quitting)
+        {
+            SDL_DestroyWindow(welcome_window);
+            SDL_DestroyRenderer(welcome_renderer);
+            SDL_DestroyTexture(welcome_texture);
+            SDL_DestroySurface(welcome_surface);
+            TTF_CloseFont(font);
+            TTF_Quit();
+
+            welcome_window = NULL;
+            welcome_renderer = NULL;
+            welcome_texture = NULL;
+            welcome_surface = NULL;
+            font = NULL;
+
+            break;
         }
 
         // Render buttons
         for (int i = 0; i < NUMBER_OF_QUIRKS; i++, column_number++)
         {
-            // Get rectangle for button
-            SDL_FRect button_rect = buttons[i].rect;
             SDL_Color button_color;
 
             // Choose colour for button (green = on, red = off)
@@ -242,7 +278,7 @@ int main(void)
             
             // Render rectangle
             SDL_SetRenderDrawColor(welcome_renderer, button_color.r, button_color.g, button_color.b, button_color.a);
-            SDL_RenderFillRect(welcome_renderer, &button_rect);
+            SDL_RenderFillRect(welcome_renderer, &buttons[i].button_rect);
 
             // Render text for button title
             TTF_RenderText_Blended(text_font, quirk_strings[i], strlen(quirk_strings[i]), font_color);
@@ -301,34 +337,17 @@ int main(void)
         {
             SDL_Log("Could not render present on welcome screen. Reason: %s\n", SDL_GetError());
         }
-
-        if (quitting)
-        {
-            SDL_DestroyWindow(welcome_window);
-            SDL_DestroyRenderer(welcome_renderer);
-            SDL_DestroyTexture(welcome_texture);
-            SDL_DestroySurface(welcome_surface);
-            TTF_CloseFont(font);
-            TTF_Quit();
-
-            welcome_window = NULL;
-            welcome_renderer = NULL;
-            welcome_texture = NULL;
-            welcome_surface = NULL;
-            font = NULL;
-
-            break;
-        }
         
-        // Reset has_changed
+        // Reset has_changed (refers to the user's filename input)
         has_changed = false;
     }
-
+    
     // Open file (for loading ROM data into memory)
     FILE *ROM_file = fopen(input_string.input, "r");
     if (ROM_file == NULL)
     {
-        SDL_Log("Could not open file (NULL).\n");
+        ROM_file = fopen("snek.ch8", "r");
+        // SDL_Log("Could not open file (NULL).\n");
     }
 
     // Determine size of file
@@ -372,7 +391,7 @@ int main(void)
             rects_arr[i][j] = get_frect(i, j, 1, 1, false);
         }
     }
-
+    
     SDL_Window* window = SDL_CreateWindow("CHIP-8", WIDTH * SCALE, HEIGHT * SCALE, 0);
     if (window == NULL)
     {
