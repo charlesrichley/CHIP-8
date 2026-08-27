@@ -148,12 +148,12 @@ int main(void)
     const char *initial_text_input = "ROM file name";
 
     // Variables for drawing buttons
-    int x_start = 20;
+    int x_start = 15;
     int y_start = 20;
     int row_number = 0;
     int column_number = 0;
     int x_buffer = 2;
-    int y_buffer = 2;
+    int y_buffer = 4;
 
     // Initialise buttons
     for (int i = 0; i < NUMBER_OF_QUIRKS; i++, column_number++)
@@ -168,9 +168,28 @@ int main(void)
         int x = x_start + column_number * BUTTON_WIDTH + x_buffer * column_number;
         int y = y_start + row_number * BUTTON_HEIGHT + y_buffer * row_number;
 
-        SDL_FRect button_rect = get_frect(x, y, BUTTON_WIDTH, BUTTON_HEIGHT, true);
+        const SDL_FRect button_rect = get_frect(x, y, BUTTON_WIDTH, BUTTON_HEIGHT, true);
 
         buttons[i] = get_button(x, y, quirk_strings[i], quirks[i], font, font_color, welcome_renderer, button_rect);
+    }
+
+    // Initialise text for buttons
+    for (int i = 0; i < NUMBER_OF_QUIRKS; i++)
+    {
+        SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255);
+        buttons[i].surface = TTF_RenderText_Blended(text_font, quirk_strings[i], strlen(quirk_strings[i]), font_color);
+
+        if (buttons[i].surface == NULL)
+        {
+            SDL_Log("Button title surface is NULL. Reason: %s\n", SDL_GetError());
+        }
+
+        buttons[i].texture = SDL_CreateTextureFromSurface(welcome_renderer, buttons[i].surface);
+        
+        if (buttons[i].texture == NULL)
+        {
+            SDL_Log("Button texture is NULL. Reason: %s\n", SDL_GetError());
+        }
     }
 
     while (!quitting)
@@ -246,25 +265,6 @@ int main(void)
             }    
         }
 
-        // Render text for button title
-        if (is_first_loop == true)
-        {
-            SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255);
-            buttons[i].surface = TTF_RenderText_Blended(text_font, quirk_strings[i], strlen(quirk_strings[i]), font_color);
-
-            if (buttons[i].surface == NULL)
-            {
-                SDL_Log("Button title surface is NULL. Reason: %s\n", SDL_GetError());
-            }
-
-            buttons[i].texture = SDL_CreateTextureFromSurface(welcome_renderer, buttons[i].surface);
-            
-            if (buttons[i].texture == NULL)
-            {
-                SDL_Log("Button texture is NULL. Reason: %s\n", SDL_GetError());
-            }
-        }
-
         // User quits the welcome screen
         if (quitting)
         {
@@ -302,12 +302,13 @@ int main(void)
             // Render rectangle
             SDL_SetRenderDrawColor(welcome_renderer, button_color.r, button_color.g, button_color.b, button_color.a);
             SDL_RenderFillRect(welcome_renderer, &buttons[i].button_rect);
-        }
 
-        // Initialise buttons
-        if (is_first_loop == true)
-        {
-            // TODO
+            SDL_FRect button_title_rect = get_frect(buttons[i].x, buttons[i].y - ((y_buffer + 1) / 1.35), BUTTON_WIDTH, (y_buffer + 1), true);
+
+            if (!SDL_RenderTexture(welcome_renderer, buttons[i].texture, NULL, &button_title_rect))
+            {
+                SDL_Log("Could not render texture for buttons. Reason: %s\n", SDL_GetError());
+            }
         }
 
         if (has_changed == true || is_first_loop == true)
