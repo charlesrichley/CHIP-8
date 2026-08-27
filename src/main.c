@@ -92,9 +92,10 @@ int main(void)
     SDL_Color off_color = {255, 0, 0, 255};
 
     // Variables for getting user input
-    bool has_changed = true; // Set to true initially so textures get initialised - in reference to string of user input being edited
+    bool has_changed = false;
     bool typing = true;
     bool quitting = false;
+    bool is_first_loop = true;
     Input_String input_string;
     input_string.input[0] = '\0';
     input_string.length = 0;
@@ -151,8 +152,8 @@ int main(void)
     int y_start = 20;
     int row_number = 0;
     int column_number = 0;
-    int x_buffer = 3;
-    int y_buffer = 3;
+    int x_buffer = 2;
+    int y_buffer = 2;
 
     // Initialise buttons
     for (int i = 0; i < NUMBER_OF_QUIRKS; i++, column_number++)
@@ -220,6 +221,8 @@ int main(void)
                     break;
 
                 case SDL_EVENT_MOUSE_BUTTON_DOWN: {
+                    // Handle buttons for quirks 
+
                     float x_click;
                     float y_click;
 
@@ -235,11 +238,31 @@ int main(void)
                         {
                             // Invert buttons[i] boolean value
                             buttons[i].is_on = !buttons[i].is_on;
+                            buttons[i].just_changed = true;
                         }
                     }
                     break;
                 }
             }    
+        }
+
+        // Render text for button title
+        if (is_first_loop == true)
+        {
+            SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255);
+            buttons[i].surface = TTF_RenderText_Blended(text_font, quirk_strings[i], strlen(quirk_strings[i]), font_color);
+
+            if (buttons[i].surface == NULL)
+            {
+                SDL_Log("Button title surface is NULL. Reason: %s\n", SDL_GetError());
+            }
+
+            buttons[i].texture = SDL_CreateTextureFromSurface(welcome_renderer, buttons[i].surface);
+            
+            if (buttons[i].texture == NULL)
+            {
+                SDL_Log("Button texture is NULL. Reason: %s\n", SDL_GetError());
+            }
         }
 
         // User quits the welcome screen
@@ -261,7 +284,7 @@ int main(void)
             break;
         }
 
-        // Render buttons
+        // Render buttons for quirks
         for (int i = 0; i < NUMBER_OF_QUIRKS; i++, column_number++)
         {
             SDL_Color button_color;
@@ -279,19 +302,21 @@ int main(void)
             // Render rectangle
             SDL_SetRenderDrawColor(welcome_renderer, button_color.r, button_color.g, button_color.b, button_color.a);
             SDL_RenderFillRect(welcome_renderer, &buttons[i].button_rect);
-
-            // Render text for button title
-            TTF_RenderText_Blended(text_font, quirk_strings[i], strlen(quirk_strings[i]), font_color);
         }
 
-        if (has_changed == true)
+        // Initialise buttons
+        if (is_first_loop == true)
+        {
+            // TODO
+        }
+
+        if (has_changed == true || is_first_loop == true)
         {
             SDL_DestroySurface(welcome_surface_input);
             SDL_DestroyTexture(welcome_texture_input);
             
-            // Render input text
-            SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255); // Set renderer to white
-            TTF_RenderText_Blended(text_font, input_string.input, input_string.length, font_color);
+            // Set renderer to white
+            SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255); 
 
             // Initialising surface for input
             if (input_string.length == 0)
@@ -317,7 +342,7 @@ int main(void)
         }
 
         // Render border for text box
-        SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255); 
+        SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255);
         SDL_RenderRect(welcome_renderer, &box_rect);
 
         // Render texture for input text
@@ -340,14 +365,20 @@ int main(void)
         
         // Reset has_changed (refers to the user's filename input)
         has_changed = false;
+
+        // Reset quirks array
+        for (int i = 0; i < NUMBER_OF_QUIRKS; i++)
+        {
+            buttons[i].just_changed = false;
+        }
     }
     
     // Open file (for loading ROM data into memory)
     FILE *ROM_file = fopen(input_string.input, "r");
     if (ROM_file == NULL)
     {
+        // Open up snek instead
         ROM_file = fopen("snek.ch8", "r");
-        // SDL_Log("Could not open file (NULL).\n");
     }
 
     // Determine size of file
@@ -490,7 +521,7 @@ int main(void)
         }
 
         // Reset pixels to black, which are later rendered based off pixels array
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         for (int i = 0; i < WIDTH; i++)
         {
             for (int j = 0; j < HEIGHT; j++)
@@ -510,6 +541,7 @@ int main(void)
         // Update sound timer and if value > 0 play beeping sound
         if (sound_timer > 0)
         {
+            // Increment sound timer
             sound_timer -= 1;
 
             // Adapted from SDL documentation of examples
