@@ -21,8 +21,8 @@
 #define QUIRK
 #define NUMBER_OF_QUIRKS 8
 
-#define BUTTON_WIDTH 5
-#define BUTTON_HEIGHT 3
+#define BUTTON_WIDTH 10
+#define BUTTON_HEIGHT 4
 
 typedef struct 
 {
@@ -50,10 +50,11 @@ typedef struct
     SDL_Texture *texture;
     SDL_FRect button_rect;
     SDL_FRect text_rect;
-    bool is_on;
     char *string;
     int x;
     int y;
+    bool is_on;
+    bool just_changed;
 } Button;
 
 enum {
