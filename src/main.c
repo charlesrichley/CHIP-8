@@ -192,6 +192,12 @@ int main(void)
         }
     }
 
+    // Create popular games menu
+    char *game_names;
+    game_names[PONG] = "PONG";
+    game_names[TETRIS] = "TETRIS";
+    game_names[SPACE_INVADERS] = "SPACE INVADERS";
+
     while (!quitting)
     {
         // Reset colour to black before clearing for black background
@@ -378,8 +384,8 @@ int main(void)
     FILE *ROM_file = fopen(input_string.input, "r");
     if (ROM_file == NULL)
     {
-        // Open up snek instead
-        ROM_file = fopen("snek.ch8", "r");
+        // Open up a game we know works instead
+        ROM_file = fopen("space_invaders.ch8", "r");
     }
 
     // Determine size of file
