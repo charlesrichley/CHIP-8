@@ -17,12 +17,13 @@
 #define SCALE 16
 #define INSRUCTIONS_PER_FRAME 12
 
-#define MAX_FILE_NAME_SIZE 2000
-#define QUIRK
 #define NUMBER_OF_QUIRKS 8
+#define MAX_FILE_NAME_SIZE 2000
 
 #define BUTTON_WIDTH 10
 #define BUTTON_HEIGHT 4
+
+#define NUMBER_OF_GAMES 3
 
 typedef struct 
 {
@@ -57,6 +58,14 @@ typedef struct
     bool just_changed;
 } Button;
 
+typedef struct 
+{
+    SDL_Texture *texture;
+    SDL_FRect rect;
+    char *name;
+} Game;
+
+
 enum {
     RESET_VF,
     MEMORY,
@@ -66,6 +75,12 @@ enum {
     JUMPING,
     FX1E_OVERFLOW,
     FX0A_PRESSED_AND_RELEASED
+};
+
+enum {
+    PONG,
+    TETRIS,
+    SPACE_INVADERS
 };
 
 extern int chip_8_arr[16];
