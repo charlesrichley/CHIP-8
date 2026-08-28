@@ -143,17 +143,18 @@ int main(void)
     const SDL_FRect input_rect = get_frect(input_x, input_y, 25, 5, true);
 
     // Initialise input surfaces and textures
-    SDL_Surface *welcome_surface_input;
-    SDL_Texture *welcome_texture_input;
+    SDL_Surface *welcome_surface_input = NULL;
+    SDL_Texture *welcome_texture_input = NULL;
     const char *initial_text_input = "ROM file name";
 
     // Variables for drawing buttons
-    int x_start = 15;
-    int y_start = 20;
+    const int x_start = 15;
+    const int y_start = 20;
+    const int x_buffer = 2;
+    const int y_buffer = 4;
+
     int row_number = 0;
     int column_number = 0;
-    int x_buffer = 2;
-    int y_buffer = 4;
 
     // Initialise buttons
     for (int i = 0; i < NUMBER_OF_QUIRKS; i++, column_number++)
@@ -193,10 +194,40 @@ int main(void)
     }
 
     // Create popular games menu
-    char *game_names;
-    game_names[PONG] = "PONG";
-    game_names[TETRIS] = "TETRIS";
-    game_names[SPACE_INVADERS] = "SPACE INVADERS";
+    Game games[NUMBER_OF_GAMES];
+    games[PONG].name = "PONG";
+    games[TETRIS].name = "TETRIS";
+    games[SPACE_INVADERS].name = "SPACE INVADERS";
+
+    const int menu_x_start = 5;
+    const int menu_y_start = 5;
+    const int menu_width = 5;
+    const int menu_height = 2;
+    const int menu_y_buffer = 4;
+
+    for (int i = 0; i < NUMBER_OF_GAMES; i++)
+    {
+        SDL_Surface *curr_surface = TTF_RenderText_Blended(font, games[i].name, strlen(games[i].name), font_color);
+        if (!curr_surface)
+        {
+            SDL_Log("Could not create surface for games menu. Reason: %s\n", SDL_GetError());
+        }
+
+        SDL_Texture *curr_texture = SDL_CreateTextureFromSurface(welcome_renderer, curr_surface);
+        if (!curr_texture)
+        {
+            SDL_Log("Could not create surface for games menu. Reason: %s\n", SDL_GetError());;
+        }
+
+        // Store texture
+        games[i].texture = curr_texture;
+
+        // Get rect for rendering later in the while loop
+        int curr_x = menu_x_start;
+        int curr_y = menu_y_start + menu_height * i + y_buffer;
+
+        games[i].rect = get_frect(curr_x, curr_y, menu_width, menu_height, true);
+    }
 
     while (!quitting)
     {
@@ -268,8 +299,8 @@ int main(void)
                     }
                     break;
                 }
-            }    
-        }
+            }
+        }  
 
         // User quits the welcome screen
         if (quitting)
@@ -288,6 +319,15 @@ int main(void)
             font = NULL;
 
             break;
+        }
+
+        // Render menu for game selection
+        for (int i = 0; i < NUMBER_OF_GAMES; i++)
+        {
+            if (!SDL_RenderTexture(welcome_renderer, games[i].texture, NULL, &games[i].rect))
+            {
+                SDL_Log("Could not render texture for game selection menu. Reason: %s\n", SDL_GetError());
+            }
         }
 
         // Render buttons for quirks
