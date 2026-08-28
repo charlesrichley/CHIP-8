@@ -27,6 +27,12 @@
 
 typedef struct 
 {
+    char *quirk_string;
+    bool is_on;
+} Quirk;
+
+typedef struct 
+{
     uint16_t arr[16];
     int top;
 } Stack;
@@ -51,6 +57,7 @@ typedef struct
     SDL_Texture *texture;
     SDL_FRect button_rect;
     SDL_FRect text_rect;
+    SDL_FRect title_rect;
     char *string;
     int x;
     int y;
@@ -60,8 +67,10 @@ typedef struct
 
 typedef struct 
 {
+    SDL_Surface *surface;
     SDL_Texture *texture;
-    SDL_FRect rect;
+    SDL_FRect text_rect;
+    SDL_FRect box_rect;
     char *name;
 } Game;
 
@@ -99,4 +108,4 @@ int scancode_to_index(Keypad keypad[16], SDL_Scancode scancode);
 int chip_8_to_keyboard(int chip_8);
 int keyboard_to_chip_8(int keyboard);
 
-Button get_button(int x, int y, char *string, bool is_on, TTF_Font *font, SDL_Color font_color, SDL_Renderer *renderer, SDL_FRect rect);
+Button get_button(int x, int y, char *string, bool is_on, TTF_Font *font, SDL_Color font_color, SDL_Renderer *renderer, SDL_FRect rect, SDL_FRect title_rect);
