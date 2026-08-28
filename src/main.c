@@ -170,8 +170,9 @@ int main(void)
         int y = y_start + row_number * BUTTON_HEIGHT + y_buffer * row_number;
 
         const SDL_FRect button_rect = get_frect(x, y, BUTTON_WIDTH, BUTTON_HEIGHT, true);
+        const SDL_FRect button_title_rect = get_frect(buttons[i].x, buttons[i].y - ((y_buffer + 1) / 1.35), BUTTON_WIDTH, (y_buffer + 1), true);
 
-        buttons[i] = get_button(x, y, quirk_strings[i], quirks[i], font, font_color, welcome_renderer, button_rect);
+        buttons[i] = get_button(x, y, quirk_strings[i], quirks[i], font, font_color, welcome_renderer, button_rect, button_title_rect);
     }
 
     // Initialise text for buttons
@@ -199,11 +200,11 @@ int main(void)
     games[TETRIS].name = "TETRIS";
     games[SPACE_INVADERS].name = "SPACE INVADERS";
 
-    const int menu_x_start = 5;
-    const int menu_y_start = 5;
-    const int menu_width = 5;
-    const int menu_height = 2;
-    const int menu_y_buffer = 4;
+    const int menu_x_start = 8;
+    const int menu_y_start = 3;
+    const int menu_width = 10;
+    const int menu_height = 3;
+    const int menu_y_buffer = 1;
 
     for (int i = 0; i < NUMBER_OF_GAMES; i++)
     {
@@ -219,14 +220,16 @@ int main(void)
             SDL_Log("Could not create surface for games menu. Reason: %s\n", SDL_GetError());;
         }
 
-        // Store texture
+        // Store surface and texture
         games[i].texture = curr_texture;
+        games[i].surface = curr_surface
 
         // Get rect for rendering later in the while loop
         int curr_x = menu_x_start;
-        int curr_y = menu_y_start + menu_height * i + y_buffer;
+        int curr_y = menu_y_start + (menu_height + menu_y_buffer) * i;
 
-        games[i].rect = get_frect(curr_x, curr_y, menu_width, menu_height, true);
+        games[i].text_rect = get_frect(curr_x, curr_y, menu_width, menu_height, true);
+        games[i].box_rect = get_frect(curr_x, curr_y, menu_width + 4, y_buffer + 1, true);
     }
 
     while (!quitting)
@@ -300,7 +303,9 @@ int main(void)
                     break;
                 }
             }
-        }  
+        }
+        
+        SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255);
 
         // User quits the welcome screen
         if (quitting)
@@ -324,10 +329,14 @@ int main(void)
         // Render menu for game selection
         for (int i = 0; i < NUMBER_OF_GAMES; i++)
         {
-            if (!SDL_RenderTexture(welcome_renderer, games[i].texture, NULL, &games[i].rect))
+            // Render text
+            if (!SDL_RenderTexture(welcome_renderer, games[i].texture, NULL, &games[i].text_rect))
             {
                 SDL_Log("Could not render texture for game selection menu. Reason: %s\n", SDL_GetError());
             }
+
+            // Render box outline
+            SDL_RenderRect(welcome_renderer, &games[i].box_rect);
         }
 
         // Render buttons for quirks
@@ -349,9 +358,7 @@ int main(void)
             SDL_SetRenderDrawColor(welcome_renderer, button_color.r, button_color.g, button_color.b, button_color.a);
             SDL_RenderFillRect(welcome_renderer, &buttons[i].button_rect);
 
-            SDL_FRect button_title_rect = get_frect(buttons[i].x, buttons[i].y - ((y_buffer + 1) / 1.35), BUTTON_WIDTH, (y_buffer + 1), true);
-
-            if (!SDL_RenderTexture(welcome_renderer, buttons[i].texture, NULL, &button_title_rect))
+            if (!SDL_RenderTexture(welcome_renderer, buttons[i].texture, NULL, &buttons[i].title_rect))
             {
                 SDL_Log("Could not render texture for buttons. Reason: %s\n", SDL_GetError());
             }
@@ -410,15 +417,17 @@ int main(void)
             SDL_Log("Could not render present on welcome screen. Reason: %s\n", SDL_GetError());
         }
         
-        // Reset has_changed (refers to the user's filename input)
-        has_changed = false;
-
         // Reset quirks array
         for (int i = 0; i < NUMBER_OF_QUIRKS; i++)
         {
             buttons[i].just_changed = false;
         }
+
+        // Reset has_changed (refers to the user's filename input)
+        has_changed = false;
     }
+
+    // <----- CHIP-8 PROGRAM STARTS ----->
     
     // Open file (for loading ROM data into memory)
     FILE *ROM_file = fopen(input_string.input, "r");
