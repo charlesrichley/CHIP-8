@@ -71,6 +71,8 @@ typedef struct
     SDL_Texture *texture;
     SDL_FRect text_rect;
     SDL_FRect box_rect;
+    int x;
+    int y;
     char *name;
 } Game;
 
@@ -97,6 +99,9 @@ extern char keyboard_arr[16];
 extern SDL_Scancode scancode_arr[16];
 extern uint8_t sprite_arr[80];
 
+extern Quirk quirks[NUMBER_OF_QUIRKS];
+extern Button buttons[NUMBER_OF_QUIRKS];
+
 void initialise(Stack *stack);
 void push(Stack *stack, uint16_t new_value);
 int pop(Stack *stack);
@@ -109,3 +114,5 @@ int chip_8_to_keyboard(int chip_8);
 int keyboard_to_chip_8(int keyboard);
 
 Button get_button(int x, int y, char *string, bool is_on, TTF_Font *font, SDL_Color font_color, SDL_Renderer *renderer, SDL_FRect rect, SDL_FRect title_rect);
+
+char *open_welcome_window(void);
