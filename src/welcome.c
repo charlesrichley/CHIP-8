@@ -112,10 +112,13 @@ char *open_welcome_window(void)
         SDL_Log("Could not create texture for rendering the continue button/text. Reason: %s\n", SDL_GetError());
     }
     
-    // Get rectangle for rendering continue button
+    // Get rect for rendering continue button
     int continue_x = 55;
     int continue_y = 3;
-    const SDL_FRect continue_box_rect = get_frect(continue_x, continue_y, 12, 6, true);
+    int continue_box_width = 12;
+    int continue_box_height = 6;
+
+    const SDL_FRect continue_box_rect = get_frect(continue_x, continue_y, continue_box_width, continue_box_height, true);
     const SDL_FRect continue_text_rect = get_frect(continue_x, continue_y, 10, 4, true);
 
     // Variables for drawing buttons
@@ -293,6 +296,12 @@ char *open_welcome_window(void)
                             input_string.length = strlen(input_string.input);
                             has_changed = true;
                         }
+                    }
+
+                    // Handle continue button
+                    if (fabsf(((float)continue_x - x_click)) < (continue_box_width / 2) && fabsf((float)continue_y - y_click) < (continue_box_height / 2))
+                    {
+                        quitting = true;
                     }
 
                     break;
