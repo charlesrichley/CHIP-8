@@ -74,6 +74,7 @@ typedef struct
     int x;
     int y;
     char *name;
+    char *file_name;
 } Game;
 
 
