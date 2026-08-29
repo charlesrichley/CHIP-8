@@ -87,15 +87,36 @@ char *open_welcome_window(void)
     const SDL_FRect title_rect = get_frect(32, 3, 20, 10, true);
 
     // Get rectangles for rendering text input and text box
-    int input_x = 48;
-    int input_y = 10;
-    const SDL_FRect box_rect = get_frect(input_x, input_y, 30, 5, true);
-    const SDL_FRect input_rect = get_frect(input_x, input_y, 25, 5, true);
+    const int input_x = 42;
+    const int input_y = 10;
+    const SDL_FRect box_rect = get_frect(input_x, input_y, 30, 6, true);
+    const SDL_FRect input_rect = get_frect(input_x, input_y, 25, 4, true);
 
     // Initialise input surfaces and textures
     SDL_Surface *welcome_surface_input = NULL;
     SDL_Texture *welcome_texture_input = NULL;
     const char *initial_text_input = "ROM file name";
+
+    // Initialise continue button
+    char *continue_button_text = "CONTINUE";
+
+    SDL_Surface *continue_surface = TTF_RenderText_Blended(font, continue_button_text, strlen(continue_button_text), font_color);
+    if (!continue_surface)
+    {
+        SDL_Log("Could not create surface for rendering the continue button/text. Reason: %s\n", SDL_GetError());
+    }
+
+    SDL_Texture *continue_texture = SDL_CreateTextureFromSurface(welcome_renderer, continue_surface);
+    if (!continue_texture)
+    {
+        SDL_Log("Could not create texture for rendering the continue button/text. Reason: %s\n", SDL_GetError());
+    }
+    
+    // Get rectangle for rendering continue button
+    int continue_x = 55;
+    int continue_y = 3;
+    const SDL_FRect continue_box_rect = get_frect(continue_x, continue_y, 12, 6, true);
+    const SDL_FRect continue_text_rect = get_frect(continue_x, continue_y, 10, 4, true);
 
     // Variables for drawing buttons
     const int x_start = 15;
@@ -120,7 +141,7 @@ char *open_welcome_window(void)
         int y = y_start + row_number * BUTTON_HEIGHT + y_buffer * row_number;
 
         const SDL_FRect button_rect = get_frect(x, y, BUTTON_WIDTH, BUTTON_HEIGHT, true);
-        const SDL_FRect button_title_rect = get_frect(buttons[i].x, buttons[i].y - ((y_buffer + 1) / 1.35), BUTTON_WIDTH, (y_buffer + 1), true);
+        const SDL_FRect button_title_rect = get_frect(x, y - ((y_buffer + 1) / 1.35), BUTTON_WIDTH, (y_buffer + 1), true);
 
         buttons[i] = get_button(x, y, quirks[i].quirk_string, quirks[i].is_on, font, font_color, welcome_renderer, button_rect, button_title_rect);
     }
@@ -146,9 +167,15 @@ char *open_welcome_window(void)
 
     // Create popular games menu
     Game games[NUMBER_OF_GAMES];
+
     games[PONG].name = "PONG";
+    games[PONG].file_name = "pong.ch8";
+
     games[TETRIS].name = "TETRIS";
+    games[TETRIS].file_name = "tetris.ch8";
+
     games[SPACE_INVADERS].name = "SPACE INVADERS";
+    games[SPACE_INVADERS].file_name = "space_invaders.ch8";
 
     const int menu_x_start = 8;
     const int menu_y_start = 3;
@@ -259,7 +286,13 @@ char *open_welcome_window(void)
                     // Handle buttons for game selection
                     for (int i = 0; i < NUMBER_OF_GAMES; i++)
                     {
-                        // if (fabsf(((float)games[i].x - x_click)) < (BUTTON_WIDTH / 2) && fabsf((float)games[i].y - y_click) < (BUTTON_HEIGHT / 2))
+                        if (fabsf(((float)games[i].x - x_click)) < (menu_box_width / 2) && fabsf((float)games[i].y - y_click) < (menu_box_height / 2))
+                        {
+                            // Set rendered text to game title
+                            strcpy(input_string.input, games[i].file_name);
+                            input_string.length = strlen(input_string.input);
+                            has_changed = true;
+                        }
                     }
 
                     break;
@@ -267,8 +300,6 @@ char *open_welcome_window(void)
             }
         }
         
-        SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255);
-
         // User quits the welcome screen
         if (quitting)
         {
@@ -282,6 +313,8 @@ char *open_welcome_window(void)
 
             break;
         }
+
+        SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255);
 
         // Render menu for game selection
         for (int i = 0; i < NUMBER_OF_GAMES; i++)
@@ -315,6 +348,7 @@ char *open_welcome_window(void)
             SDL_SetRenderDrawColor(welcome_renderer, button_color.r, button_color.g, button_color.b, button_color.a);
             SDL_RenderFillRect(welcome_renderer, &buttons[i].button_rect);
 
+            
             if (!SDL_RenderTexture(welcome_renderer, buttons[i].texture, NULL, &buttons[i].title_rect))
             {
                 SDL_Log("Could not render texture for buttons. Reason: %s\n", SDL_GetError());
@@ -356,6 +390,9 @@ char *open_welcome_window(void)
         SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255);
         SDL_RenderRect(welcome_renderer, &box_rect);
 
+        // Render border for continue button
+        SDL_RenderRect(welcome_renderer, &continue_box_rect);
+
         // Render texture for input text
         if (!SDL_RenderTexture(welcome_renderer, welcome_texture_input, NULL, &input_rect))
         {
@@ -366,6 +403,12 @@ char *open_welcome_window(void)
         if (!SDL_RenderTexture(welcome_renderer, welcome_texture, NULL, &title_rect))
         {
             SDL_Log("Could not render title text (texture) on welcome screen. Reason: %s\n", SDL_GetError());
+        }
+
+        // Render texture for continue button texr
+        if (!SDL_RenderTexture(welcome_renderer, continue_texture, NULL, &continue_text_rect))
+        {
+            SDL_Log("Could not render continue button text. Reason: %s\n", SDL_GetError());
         }
         
         // Render present 
@@ -384,10 +427,9 @@ char *open_welcome_window(void)
         has_changed = false;
     }
 
-    int input_string_length = strlen(input_string.input);
-    char *file_name = malloc(input_string_length * sizeof(char) + 1);
+    char *file_name = malloc((input_string.length + 1) * sizeof(char));
 
-    if (!file_name)
+    if (file_name != NULL)
     {
         file_name = strcpy(file_name, input_string.input);
     }
