@@ -22,20 +22,17 @@ uint8_t sprite_arr[80] = {0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
 0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
 0xF0, 0x80, 0xF0, 0x80, 0x80}; // F
 
-// Initialises a stack
 void initialise(Stack *stack)
 {
     stack->top = -1;
 }
 
-// Inserts element to top of stack
 void push(Stack *stack, uint16_t new_value)
 {
     stack->arr[(stack->top) + 1] = new_value;
     stack->top += 1;
 }
 
-// Removes top element of stack (and returns the popped integer)
 int pop(Stack *stack)
 {
     int popped_number = stack->arr[stack->top];
@@ -43,7 +40,6 @@ int pop(Stack *stack)
     return popped_number;
 }
 
-// Gets CHIP-8 key from keyboard key
 int chip_8_to_keyboard(int chip_8)
 {
     for (int i = 0; i < 16; i++)
@@ -56,7 +52,6 @@ int chip_8_to_keyboard(int chip_8)
     return -1;
 }
 
-// Given keyboard key return index
 int keyboard_to_index(char c)
 {
     for (int i = 0; i < 16; i++)
@@ -69,7 +64,6 @@ int keyboard_to_index(char c)
     return -1;
 }
 
-// Returns index of scancode value in keypad array
 int scancode_to_index(Keypad keypad[16], SDL_Scancode scancode)
 {
     for (int i = 0; i < 16; i++)
@@ -84,7 +78,6 @@ int scancode_to_index(Keypad keypad[16], SDL_Scancode scancode)
 
 // <----- UI FUNCTIONS ----->
 
-// Returns rectangle at coordinates (i, j) width w height h
 SDL_FRect get_frect(int i, int j, int w, int h, bool is_centered)
 {
     SDL_FRect rect;
@@ -104,7 +97,6 @@ SDL_FRect get_frect(int i, int j, int w, int h, bool is_centered)
     return rect;
 }
 
-// Creates a button when given all necessary features
 Button get_button(int x, int y, char *string, bool is_on, TTF_Font *font, SDL_Color font_color, SDL_Renderer *renderer, SDL_FRect rect, SDL_FRect title_rect)
 {
     Button button;
@@ -128,7 +120,6 @@ Button get_button(int x, int y, char *string, bool is_on, TTF_Font *font, SDL_Co
     return button;
 }
 
-// <---- CHECKS NULL FOR SDL FUNCTIONS ----->
 void check_renderer(SDL_Renderer *renderer, char *message)
 {
     if (!renderer)
