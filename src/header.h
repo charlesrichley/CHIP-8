@@ -20,7 +20,7 @@
 #define NUMBER_OF_QUIRKS 8
 #define MAX_FILE_NAME_SIZE 2000
 
-#define BUTTON_WIDTH 10
+#define BUTTON_WIDTH 11
 #define BUTTON_HEIGHT 4
 
 #define NUMBER_OF_GAMES 3
@@ -81,7 +81,7 @@ typedef struct
 enum {
     RESET_VF,
     MEMORY,
-    DISPLAY_WAIT,
+    DRAW_WAIT,
     CLIPPING,
     SHIFTING,
     JUMPING,
@@ -112,8 +112,13 @@ SDL_FRect get_frect(int i, int j, int w, int h, bool is_centered);
 int keyboard_to_index(char c);
 int scancode_to_index(Keypad keypad[16], SDL_Scancode scancode);
 int chip_8_to_keyboard(int chip_8);
-int keyboard_to_chip_8(int keyboard);
 
 Button get_button(int x, int y, char *string, bool is_on, TTF_Font *font, SDL_Color font_color, SDL_Renderer *renderer, SDL_FRect rect, SDL_FRect title_rect);
 
 char *open_welcome_window(void);
+
+void check_renderer(SDL_Renderer *renderer, char *message);
+void check_window(SDL_Window *window, char *message);
+void check_surface(SDL_Surface *surface, char *message);
+void check_texture(SDL_Texture *texture, char *message);
+void check_font(TTF_Font *font, char *message);
