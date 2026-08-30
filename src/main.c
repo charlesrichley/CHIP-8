@@ -28,8 +28,8 @@ int main(void)
     quirks[MEMORY].quirk_string = "MEMORY";
 
     // DXYN only called once per frame 
-    quirks[DISPLAY_WAIT].is_on = false;
-    quirks[DISPLAY_WAIT].quirk_string = "DISPLAY WAIT";
+    quirks[DRAW_WAIT].is_on = false;
+    quirks[DRAW_WAIT].quirk_string = "DRAW WAIT";
 
     // Sprites get clipped instead of wrapping in DXYN
     quirks[CLIPPING].is_on = false;
@@ -106,15 +106,10 @@ int main(void)
     }
     
     SDL_Window* window = SDL_CreateWindow("CHIP-8", WIDTH * SCALE, HEIGHT * SCALE, 0);
-    if (window == NULL)
-    {
-        SDL_Log("Window creation failed. \nReason: %s\n", SDL_GetError());
-    }
+    check_window(window, "Could not initialise main window.");
 
     SDL_Renderer* renderer = SDL_CreateRenderer(window, NULL);
-    if (renderer == NULL){
-        SDL_Log("Renderer creation failed. \nReason: %s\n", SDL_GetError());
-    }
+    check_renderer(renderer, "Could not initialise main renderer.");
 
     // Allow renderer to adjust to window size (adjusted by scale factor)
     SDL_SetRenderLogicalPresentation(renderer, WIDTH, HEIGHT, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
@@ -219,7 +214,6 @@ int main(void)
         if (index_register >= 4096)
         {
             SDL_Log("Index register has overflowed. \n");
-            return 1;
         }
 
         // Update sound timer and if value > 0 play beeping sound
@@ -571,7 +565,7 @@ int main(void)
                         y_coord += 1;
                     }
                     
-                    if (quirks[DISPLAY_WAIT].is_on)
+                    if (quirks[DRAW_WAIT].is_on)
                     {
                         DXYN_PAUSED = true;
                     }
@@ -710,7 +704,7 @@ int main(void)
         }
 
         // Reset DXYN_PAUSED at end of loop
-        if (quirks[DISPLAY_WAIT].is_on)
+        if (quirks[DRAW_WAIT].is_on)
         {
             DXYN_PAUSED = false;
         }
@@ -733,9 +727,10 @@ int main(void)
     {
         SDL_DestroyWindow(window);
         SDL_DestroyRenderer(renderer);
-        window = NULL;
-        renderer = NULL;
         SDL_Quit();
+
+        // Free memory allocated in welcome.c for the ROM file name
+        free(file_name);
     }
 
     return 0;
