@@ -14,7 +14,7 @@ char *open_welcome_window(void)
 
     SDL_Renderer* welcome_renderer = SDL_CreateRenderer(welcome_window, NULL);
     check_renderer(welcome_renderer, "Could not initialise welcome renderer.");
-
+    
     // Allow renderer to adjust to window size (adjusted by scale factor)
     SDL_SetRenderLogicalPresentation(welcome_renderer, WIDTH, HEIGHT, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
 
@@ -129,8 +129,6 @@ char *open_welcome_window(void)
     // Initialise text for buttons
     for (int i = 0; i < NUMBER_OF_QUIRKS; i++)
     {
-        SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255);
-
         buttons[i].surface = TTF_RenderText_Blended(text_font, quirks[i].quirk_string, strlen(quirks[i].quirk_string), font_color);
         check_surface(buttons[i].surface, "Button title surface is NULL.");
 
@@ -138,7 +136,7 @@ char *open_welcome_window(void)
         check_texture(buttons[i].texture, "Button texture is NULL.");
     }
 
-    // Create popular games menu
+    // Initialise popular games menu
     Game games[NUMBER_OF_GAMES];
 
     games[PONG].name = "PONG";
@@ -156,8 +154,8 @@ char *open_welcome_window(void)
     const int menu_height = 3;
     const int menu_y_buffer = 1;
 
-    int menu_box_width = menu_width + 4;
-    int menu_box_height = y_buffer + 1;
+    const int menu_box_width = menu_width + 4;
+    const int menu_box_height = y_buffer + 1;
 
     for (int i = 0; i < NUMBER_OF_GAMES; i++)
     {
@@ -191,6 +189,9 @@ char *open_welcome_window(void)
         {
             SDL_Log("Could not clear welcome renderer. Reason: %s\n", SDL_GetError());
         }
+
+        // Reset colour back to white
+        SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255);
 
         while (SDL_PollEvent(&event))
         {
@@ -276,14 +277,14 @@ char *open_welcome_window(void)
         // User quits the welcome screen
         if (quitting)
         {
-            // Destroy textures and surfaces of buttons (for quirks)
+            // Destroy surfaces and textures for quirks
             for (int i = 0; i < NUMBER_OF_QUIRKS; i++)
             {
                     SDL_DestroySurface(buttons[i].surface);
                     SDL_DestroyTexture(buttons[i].texture);
             }
 
-            // Destroy textures and surfaces of buttons (for games)
+            // Destroy surfaces and textures for games
             for (int i = 0; i < NUMBER_OF_GAMES; i++)
             {
                 SDL_DestroySurface(games[i].surface);
@@ -301,8 +302,6 @@ char *open_welcome_window(void)
             break;
         }
 
-        SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255);
-
         // Render menu for game selection
         for (int i = 0; i < NUMBER_OF_GAMES; i++)
         {
@@ -314,6 +313,53 @@ char *open_welcome_window(void)
 
             // Render box outline
             SDL_RenderRect(welcome_renderer, &games[i].box_rect);
+        }
+
+        // Update file name input
+        if (has_changed == true || is_first_loop == true)
+        {
+            SDL_DestroySurface(welcome_surface_input);
+            SDL_DestroyTexture(welcome_texture_input);
+            
+            // Initialising surface for input
+            if (input_string.length == 0)
+            {
+                welcome_surface_input = TTF_RenderText_Blended(text_font, initial_text_input, strlen(initial_text_input), font_color);   
+            }
+            else
+            {
+                welcome_surface_input = TTF_RenderText_Blended(text_font, input_string.input, input_string.length, font_color);   
+            }
+
+            check_surface(welcome_surface_input, "Could not update surface for rendering input string.");
+
+            // Initialising texture for input
+            welcome_texture_input = SDL_CreateTextureFromSurface(welcome_renderer, welcome_surface_input);
+            check_texture(welcome_texture_input, "Could not update texture for rendering input string.");
+        }
+
+        // Render border for text box
+        SDL_RenderRect(welcome_renderer, &box_rect);
+
+        // Render border for continue button
+        SDL_RenderRect(welcome_renderer, &continue_box_rect);
+
+        // Render texture for input text
+        if (!SDL_RenderTexture(welcome_renderer, welcome_texture_input, NULL, &input_rect))
+        {
+            SDL_Log("Could not render input text. Reason: %s\n", SDL_GetError());
+        }
+
+        // Render texture for title text
+        if (!SDL_RenderTexture(welcome_renderer, welcome_texture, NULL, &title_rect))
+        {
+            SDL_Log("Could not render title text (texture) on welcome screen. Reason: %s\n", SDL_GetError());
+        }
+
+        // Render texture for continue button texr
+        if (!SDL_RenderTexture(welcome_renderer, continue_texture, NULL, &continue_text_rect))
+        {
+            SDL_Log("Could not render continue button text. Reason: %s\n", SDL_GetError());
         }
 
         // Render buttons for quirks
@@ -340,56 +386,6 @@ char *open_welcome_window(void)
             {
                 SDL_Log("Could not render texture for buttons. Reason: %s\n", SDL_GetError());
             }
-        }
-
-        if (has_changed == true || is_first_loop == true)
-        {
-            SDL_DestroySurface(welcome_surface_input);
-            SDL_DestroyTexture(welcome_texture_input);
-            
-            // Set renderer to white
-            SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255); 
-
-            // Initialising surface for input
-            if (input_string.length == 0)
-            {
-                welcome_surface_input = TTF_RenderText_Blended(text_font, initial_text_input, strlen(initial_text_input), font_color);   
-            }
-            else
-            {
-                welcome_surface_input = TTF_RenderText_Blended(text_font, input_string.input, input_string.length, font_color);   
-            }
-
-            check_surface(welcome_surface_input, "Could not update surface for rendering input string.");
-
-            // Initialising texture for input
-            welcome_texture_input = SDL_CreateTextureFromSurface(welcome_renderer, welcome_surface_input);
-            check_texture(welcome_texture_input, "Could not update texture for rendering input string.");
-        }
-
-        // Render border for text box
-        SDL_SetRenderDrawColor(welcome_renderer, 255, 255, 255, 255);
-        SDL_RenderRect(welcome_renderer, &box_rect);
-
-        // Render border for continue button
-        SDL_RenderRect(welcome_renderer, &continue_box_rect);
-
-        // Render texture for input text
-        if (!SDL_RenderTexture(welcome_renderer, welcome_texture_input, NULL, &input_rect))
-        {
-            SDL_Log("Could not render input text. Reason: %s\n", SDL_GetError());
-        }
-
-        // Render texture for title text
-        if (!SDL_RenderTexture(welcome_renderer, welcome_texture, NULL, &title_rect))
-        {
-            SDL_Log("Could not render title text (texture) on welcome screen. Reason: %s\n", SDL_GetError());
-        }
-
-        // Render texture for continue button texr
-        if (!SDL_RenderTexture(welcome_renderer, continue_texture, NULL, &continue_text_rect))
-        {
-            SDL_Log("Could not render continue button text. Reason: %s\n", SDL_GetError());
         }
         
         // Render present 
