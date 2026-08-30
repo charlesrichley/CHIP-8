@@ -12,24 +12,24 @@
 #include <SDL3_ttf/SDL_ttf.h>
 #include <inttypes.h>
 
+// Define constants for CHIP-8 emulation
 #define WIDTH 64
 #define HEIGHT 32
 #define SCALE 16
 #define INSRUCTIONS_PER_FRAME 12
 
+// CHIP-8 has ambigious specification, so different ROMS rely on different quirks
 #define NUMBER_OF_QUIRKS 8
-#define MAX_FILE_NAME_SIZE 2000
 
+// For user input of file name
+#define MAX_FILE_NAME_SIZE 1000
+
+// Constants for buttons to toggle quirks on and off
 #define BUTTON_WIDTH 11
 #define BUTTON_HEIGHT 4
 
+// Number of games in the top left menu
 #define NUMBER_OF_GAMES 3
-
-typedef struct 
-{
-    char *quirk_string;
-    bool is_on;
-} Quirk;
 
 typedef struct 
 {
@@ -39,12 +39,19 @@ typedef struct
 
 typedef struct 
 {
+    char *quirk_string;
+    bool is_on;
+} Quirk;
+
+typedef struct 
+{
     int chip_8;
     char keyboard;
     SDL_Scancode scancode;
     bool is_down;
 } Keypad;
 
+// Input string for user inputting a filename
 typedef struct
 {
     char input[MAX_FILE_NAME_SIZE];
@@ -77,7 +84,6 @@ typedef struct
     char *file_name;
 } Game;
 
-
 enum {
     RESET_VF,
     MEMORY,
@@ -103,20 +109,35 @@ extern uint8_t sprite_arr[80];
 extern Quirk quirks[NUMBER_OF_QUIRKS];
 extern Button buttons[NUMBER_OF_QUIRKS];
 
-void initialise(Stack *stack);
-void push(Stack *stack, uint16_t new_value);
-int pop(Stack *stack);
-
-SDL_FRect get_frect(int i, int j, int w, int h, bool is_centered);
-
-int keyboard_to_index(char c);
-int scancode_to_index(Keypad keypad[16], SDL_Scancode scancode);
-int chip_8_to_keyboard(int chip_8);
-
-Button get_button(int x, int y, char *string, bool is_on, TTF_Font *font, SDL_Color font_color, SDL_Renderer *renderer, SDL_FRect rect, SDL_FRect title_rect);
-
+// Main function in helpers.c that runs the welcome screen
 char *open_welcome_window(void);
 
+// Initialises a stack
+void initialise(Stack *stack);
+
+// Inserts element to top of stack
+void push(Stack *stack, uint16_t new_value);
+
+// Removes top element of stack (and returns the popped integer)
+int pop(Stack *stack);
+
+// Returns index when given keyboard key
+int keyboard_to_index(char c);
+
+// Returns index when given scancode
+int scancode_to_index(Keypad keypad[16], SDL_Scancode scancode);
+
+// Returns keyboard key when given CHIP-8 key
+int chip_8_to_keyboard(int chip_8);
+
+// Returns a rect at coordinates i, j, with width w height h
+// if is_centered is false if i, ) is the top left of the rect
+SDL_FRect get_frect(int i, int j, int w, int h, bool is_centered);
+
+// Creates a button when given all necessary features
+Button get_button(int x, int y, char *string, bool is_on, TTF_Font *font, SDL_Color font_color, SDL_Renderer *renderer, SDL_FRect rect, SDL_FRect title_rect);
+
+// Checks NULL for all SDL types
 void check_renderer(SDL_Renderer *renderer, char *message);
 void check_window(SDL_Window *window, char *message);
 void check_surface(SDL_Surface *surface, char *message);
