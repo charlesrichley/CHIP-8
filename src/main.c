@@ -1,15 +1,14 @@
 #include "header.h"
 
-// Memory is 4 kB (4096 bytes). 
-// Initial space can be left empty before 0x200 (except for fonts at 0x50)
+// Memory is 4 kB (4096 bytes) - initial space empty before 0x200, except for fonts at 0x50
 uint8_t memory[4096];
 
+// Initialise all arrays
 uint8_t pixels[WIDTH][HEIGHT];
 Keypad keypad[16];
 uint8_t registers[16];
 Stack stack;
 SDL_FRect rects_arr[WIDTH][HEIGHT];
-
 Quirk quirks[NUMBER_OF_QUIRKS];
 Button buttons[NUMBER_OF_QUIRKS];
 
@@ -17,7 +16,7 @@ int main(void)
 {
     // <----- QUIRKS ----->
     // CHIP-8 has ambigious instructions so there are settings to adjust quirks
-    // The defaults are the most standard ones that will allow most games to run
+    // The defaults are the standard ones that will allow most games to run
     
     // 8XY1, 8XY2, 8XY3 reset registers[0xF] to 0
     quirks[RESET_VF].is_on = false;
@@ -51,6 +50,7 @@ int main(void)
     quirks[FX0A_PRESSED_AND_RELEASED].is_on = true;
     quirks[FX0A_PRESSED_AND_RELEASED].quirk_string = "PRESSED";
 
+    // Opens up welcome window to allow user to adjust quirks and select a game
     char *file_name = open_welcome_window();
 
     // <----- CHIP-8 PROGRAM STARTS ----->
@@ -119,14 +119,14 @@ int main(void)
     bool fx0a_completed = false;
     uint8_t fx0a_hexadecimal;
 
-    // Initialising program counter and index register
-    uint16_t pc = 0x200;
-    uint16_t index_register = 0;
-
     // Timers decremented once per frame (60 Hz)
     uint8_t delay_timer = 0;
     uint8_t sound_timer = 0;
     int curr_sample = 0;
+
+    // Initialising program counter and index register
+    uint16_t pc = 0x200;
+    uint16_t index_register = 0;
 
     // Event loop
     const float target_frame_time = 1000 / 60;  // 60 FPS, so 0.017 seconds per frame.
@@ -136,7 +136,7 @@ int main(void)
     SDL_zero(event);
 
     // Add a small delay before opening emulator
-    SDL_Delay(300);
+    SDL_Delay(400);
 
     while (!quitting)
     {
@@ -288,7 +288,7 @@ int main(void)
             uint8_t y = nibble_3;
 
             // Keyboard input for EX9E and EXA1 - 
-            // if key is CURRENTLY being held down, which is different to FX0A
+            // if key is CURRENTLY being held down (different to FX0A)
             int curr_key = chip_8_to_keyboard(registers[x]);
             const bool *ex_keyboard = SDL_GetKeyboardState(NULL);
             if (ex_keyboard == NULL)
@@ -725,12 +725,12 @@ int main(void)
 
     if (quitting)
     {
+        // Free memory allocated in welcome.c for the ROM file name
+        free(file_name);
+
         SDL_DestroyWindow(window);
         SDL_DestroyRenderer(renderer);
         SDL_Quit();
-
-        // Free memory allocated in welcome.c for the ROM file name
-        free(file_name);
     }
 
     return 0;
