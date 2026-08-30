@@ -43,26 +43,6 @@ int pop(Stack *stack)
     return popped_number;
 }
 
-// Returns rectangle at coordinates (i, j) width w height h
-SDL_FRect get_frect(int i, int j, int w, int h, bool is_centered)
-{
-    SDL_FRect rect;
-    if (is_centered == true)
-    {
-        rect.x = i - w/2;
-        rect.y = j - h/2;
-    }
-    else 
-    {
-        rect.x = i;
-        rect.y = j;
-    }
-
-    rect.w = w;
-    rect.h = h;
-    return rect;
-}
-
 // Gets CHIP-8 key from keyboard key
 int chip_8_to_keyboard(int chip_8)
 {
@@ -71,19 +51,6 @@ int chip_8_to_keyboard(int chip_8)
         if (chip_8_arr[i] == chip_8)
         {
             return keyboard_arr[i];
-        }
-    }
-    return -1;
-}
-
-// Gets keyboard key from CHIP-8 key
-int keyboard_to_chip_8(int keyboard)
-{
-    for (int i = 0; i < 16; i++)
-    {
-        if (keyboard == keyboard_arr[i])
-        {
-            return chip_8_arr[i];
         }
     }
     return -1;
@@ -117,24 +84,37 @@ int scancode_to_index(Keypad keypad[16], SDL_Scancode scancode)
 
 // <----- UI FUNCTIONS ----->
 
-// Surface -> Texture -> Render text
+// Returns rectangle at coordinates (i, j) width w height h
+SDL_FRect get_frect(int i, int j, int w, int h, bool is_centered)
+{
+    SDL_FRect rect;
+    if (is_centered == true)
+    {
+        rect.x = i - w/2;
+        rect.y = j - h/2;
+    }
+    else 
+    {
+        rect.x = i;
+        rect.y = j;
+    }
+
+    rect.w = w;
+    rect.h = h;
+    return rect;
+}
+
+// Creates a button when given all necessary features
 Button get_button(int x, int y, char *string, bool is_on, TTF_Font *font, SDL_Color font_color, SDL_Renderer *renderer, SDL_FRect rect, SDL_FRect title_rect)
 {
-    // Initialise button
     Button button;
 
     SDL_Surface *surface = TTF_RenderText_Blended(font, string, strlen(string), font_color);
-    if (!surface)
-    {
-        SDL_Log("Could not initialise surface. Reason: %s\n", SDL_GetError());
-    }
+    check_surface(surface, "Could not initialise surface for button.");
 
     // Initialsing texture for title
     SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
-    if (!texture)
-    {
-        SDL_Log("Could not initialise texture. Reason: %s\n", SDL_GetError());
-    }
+    check_texture(texture, "Could not initialise texture for button.");
 
     button.button_rect = rect;
     button.title_rect = title_rect;
@@ -146,4 +126,45 @@ Button get_button(int x, int y, char *string, bool is_on, TTF_Font *font, SDL_Co
     button.y = y;
 
     return button;
+}
+
+// <---- CHECKS NULL FOR SDL FUNCTIONS ----->
+void check_renderer(SDL_Renderer *renderer, char *message)
+{
+    if (!renderer)
+    {
+        SDL_Log("%s\n Reason: %s\n", message, SDL_GetError());
+    }
+}
+
+void check_window(SDL_Window *window, char *message)
+{
+    if (!window)
+    {
+        SDL_Log("%s\n Reason: %s\n", message, SDL_GetError());
+    }
+}
+
+void check_surface(SDL_Surface *surface, char *message)
+{
+    if (!surface)
+    {
+        SDL_Log("%s\n Reason: %s\n", message, SDL_GetError());
+    }
+}
+
+void check_texture(SDL_Texture *texture, char *message)
+{
+    if (!texture)
+    {
+        SDL_Log("%s\n Reason: %s\n", message, SDL_GetError());
+    }
+}
+
+void check_font(TTF_Font *font, char *message)
+{
+    if (!font)
+    {
+        SDL_Log("%s\n Reason: %s\n", message, SDL_GetError());
+    }
 }
