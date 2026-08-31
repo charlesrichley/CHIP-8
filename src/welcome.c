@@ -18,11 +18,6 @@ char *open_welcome_window(void)
     // Allow renderer to adjust to window size (adjusted by scale factor)
     SDL_SetRenderLogicalPresentation(welcome_renderer, WIDTH, HEIGHT, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
 
-    if (!SDL_StartTextInput(welcome_window))
-    {
-        SDL_Log("Could not get text input. Reason: %s\n", SDL_GetError());
-    }
-
     // Initialise TTF
     if (!TTF_Init())
     {
@@ -36,26 +31,15 @@ char *open_welcome_window(void)
     SDL_Color on_color = {0, 255, 0, 255};
     SDL_Color off_color = {255, 0, 0, 255};
 
-    // Variables for getting user input
-    bool has_changed = false;
-    bool typing = true;
-    bool quitting = false;
-    bool is_first_loop = true;
-    Input_String input_string;
-    input_string.input[0] = '\0';
-    input_string.length = 0;
-    SDL_Event event;
-    SDL_zero(event);
-
     // Initialising font for title
     const float title_font_size = 120; // Higher font size so text is less pixelated
     TTF_Font *font = TTF_OpenFont("bold_font.ttf", title_font_size);
     check_font(font, "Could not initialise font for title.");
 
-    // White text box so users can see their keyboard input (only a border of a rect)
+    // Initialising font
     const float text_font_size = 200;
     TTF_Font *text_font = TTF_OpenFont("jetbrains_mono.ttf", text_font_size);
-    check_font(text_font, "Could not initialise font for keyboard input.");
+    check_font(text_font, "Could not initialise font.");
 
     // Initialising surface for title
     char *welcome_text = "CHIP-8";
@@ -69,17 +53,6 @@ char *open_welcome_window(void)
     // Get rectangles for rendering title
     const SDL_FRect title_rect = get_frect(32, 3, 20, 10, true);
 
-    // Get rectangles for rendering text input and text box
-    const int input_x = 42;
-    const int input_y = 10;
-    const SDL_FRect box_rect = get_frect(input_x, input_y, 30, 6, true);
-    const SDL_FRect input_rect = get_frect(input_x, input_y, 25, 4, true);
-
-    // Initialise input surfaces and textures
-    SDL_Surface *welcome_surface_input = NULL;
-    SDL_Texture *welcome_texture_input = NULL;
-    const char *initial_text_input = "ROM file name";
-
     // Initialise continue button
     char *continue_button_text = "CONTINUE";
 
@@ -88,15 +61,6 @@ char *open_welcome_window(void)
 
     SDL_Texture *continue_texture = SDL_CreateTextureFromSurface(welcome_renderer, continue_surface);
     check_texture(continue_texture, "Could not create texture for rendering the continue button/text.");
-    
-    int continue_x = 55;
-    int continue_y = 3;
-    int continue_box_width = 12;
-    int continue_box_height = 6;
-
-    // Get rect for rendering continue button
-    const SDL_FRect continue_box_rect = get_frect(continue_x, continue_y, continue_box_width, continue_box_height, true);
-    const SDL_FRect continue_text_rect = get_frect(continue_x, continue_y, 10, 4, true);
 
     // Variables for drawing buttons
     const int x_start = 12;
@@ -157,6 +121,7 @@ char *open_welcome_window(void)
     const int menu_box_width = menu_width + 4;
     const int menu_box_height = y_buffer + 1;
 
+    // Initialise games
     for (int i = 0; i < NUMBER_OF_GAMES; i++)
     {
         SDL_Surface *curr_surface = TTF_RenderText_Blended(font, games[i].name, strlen(games[i].name), font_color);
@@ -180,6 +145,60 @@ char *open_welcome_window(void)
         games[i].box_rect = get_frect(curr_x, curr_y, menu_box_width, menu_box_height, true);
     }
 
+    // Initialise variables for continue button
+    int continue_x = 54;
+    int continue_y = 4;
+    int continue_box_width = 14;
+    int continue_box_height = 6;
+
+    // Get rect for rendering continue button
+    const SDL_FRect continue_box_rect = get_frect(continue_x, continue_y, continue_box_width, continue_box_height, true);
+    const SDL_FRect continue_text_rect = get_frect(continue_x, continue_y, 10, 4, true);
+
+    // Initialise button for opening ROM file
+    char *file_button_str = "OPEN ROM FILE";
+    SDL_Surface *file_surface = TTF_RenderText_Blended(font, file_button_str, strlen(file_button_str), font_color);
+    check_surface(file_surface, "Could not create surface for games menu.");
+
+    SDL_Texture *file_texture = SDL_CreateTextureFromSurface(welcome_renderer, file_surface);
+    check_texture(file_texture, "Could not create texture for games menu.");
+
+    // Get rectangles for rendering button to open file
+    const int file_box_width = 18;
+    const int file_box_height = 5;
+
+    const int file_x = 32;
+    const int file_y = 10;
+    const SDL_FRect file_box_rect = get_frect(file_x, file_y, file_box_width, file_box_height, true);
+    const SDL_FRect file_text_rect = get_frect(file_x, file_y, file_box_width - 4, file_box_height - 2, true);
+
+    // Initialise button for opening ROM file
+    char *name_button_str = "NO FILE SELECTED";
+    SDL_Surface *name_surface = TTF_RenderText_Blended(font, name_button_str, strlen(name_button_str), font_color);
+    check_surface(name_surface, "Could not create surface for displaying file name.");
+
+    SDL_Texture *name_texture = SDL_CreateTextureFromSurface(welcome_renderer, name_surface);
+    check_texture(name_texture, "Could not create texture for displaying file name.");
+
+    // Get rectangles for displaying file name (underneath continue button)
+    const int name_box_width = 10;
+    const int name_box_height = 5;
+
+    const int name_x = 54;
+    const int name_y = 48;
+    const SDL_FRect name_box_rect = get_frect(name_x, name_y, name_box_width, name_box_height, true);
+    const SDL_FRect name_text_rect = get_frect(name_x, name_y, name_box_width - 4, name_box_height - 2, true);
+
+    // Initialise file name - edited later by selecting game in menu or opening file
+    char *file_name;
+
+    // Variables for loop
+    bool quitting = false;
+    bool is_first_loop = true;
+    bool can_continue = false;
+    SDL_Event event;
+    SDL_zero(event);
+
     while (!quitting)
     {
         // Reset colour to black before clearing for black background
@@ -198,37 +217,6 @@ char *open_welcome_window(void)
             switch(event.type){
                 case SDL_EVENT_QUIT:
                     quitting = true;
-                    typing = false;
-
-                    // Stop further text input
-                    if (!SDL_StopTextInput(welcome_window))
-                    {
-                        SDL_Log("Could not end text input. Reason: %s\n", SDL_GetError());
-                    }
-                    break;
-
-                case SDL_EVENT_TEXT_INPUT:
-                    // User is inputting text (for the file name for ROM)
-                    if (typing)
-                    {
-                        strcat(input_string.input, event.text.text);
-                        input_string.length++;
-                        has_changed = true;
-                    }
-                    break;
-                
-                case SDL_EVENT_KEY_DOWN:
-                    if (typing)
-                    {   
-                        // User is deleting text input  
-                        if ((event.key.key == SDLK_BACKSPACE) && strcmp(input_string.input, "") != 0)  
-                        {
-                            input_string.input[input_string.length - 1] = '\0';
-                            input_string.length--;
-                            has_changed = true;
-                        }
-                    }
-                    break;
 
                 case SDL_EVENT_MOUSE_BUTTON_DOWN: {
                     float x_click;
@@ -256,17 +244,22 @@ char *open_welcome_window(void)
                     {
                         if (fabsf(((float)games[i].x - x_click)) < (menu_box_width / 2) && fabsf((float)games[i].y - y_click) < (menu_box_height / 2))
                         {
-                            // Set rendered text to game title
-                            strcpy(input_string.input, games[i].file_name);
-                            input_string.length = strlen(input_string.input);
-                            has_changed = true;
+                            file_name = games[i].file_name;
+                            can_continue = true;
                         }
                     }
 
                     // Handle continue button
-                    if (fabsf(((float)continue_x - x_click)) < (continue_box_width / 2) && fabsf((float)continue_y - y_click) < (continue_box_height / 2))
+                    if (can_continue && fabsf(((float)continue_x - x_click)) < (continue_box_width / 2) && fabsf((float)continue_y - y_click) < (continue_box_height / 2))
                     {
                         quitting = true;
+                    }
+
+                    // Handle open file button
+                    if (fabsf(((float)file_x - x_click)) < (file_box_width / 2) && fabsf((float)file_y - y_click) < (file_box_height / 2))
+                    {
+                        // Open up file selection window
+                        SDL_ShowOpenFileDialog(callback, &file_name, welcome_window, NULL, 0, NULL, false);
                     }
 
                     break;
@@ -302,6 +295,36 @@ char *open_welcome_window(void)
             break;
         }
 
+        // Check file is not NULL and has valid size
+        FILE *ROM_file = fopen(file_name, "r");
+        if (ROM_file != NULL)
+        {
+            // Determine size of file (in bytes)
+            fseek(ROM_file, 0, SEEK_END);
+            long size = ftell(ROM_file);
+
+            // CHIP-8 program starts at 0x200 - ensure file doesn't exceed memory capacity
+            if (size > (4096 - 0x200))
+            {
+                can_continue = false;
+            }
+            else
+            {
+                can_continue = true;
+            }
+        }
+        else
+        {
+            can_continue = false;
+        }        
+
+        // Render open file button
+        if (!SDL_RenderTexture(welcome_renderer, file_texture, NULL, &file_text_rect))
+        {
+            SDL_Log("Could not render texture for open file button. Reason: %s\n", SDL_GetError());
+        }
+        SDL_RenderRect(welcome_renderer, &file_box_rect);
+
         // Render menu for game selection
         for (int i = 0; i < NUMBER_OF_GAMES; i++)
         {
@@ -315,48 +338,13 @@ char *open_welcome_window(void)
             SDL_RenderRect(welcome_renderer, &games[i].box_rect);
         }
 
-        // Update file name input
-        if (has_changed == true || is_first_loop == true)
-        {
-            SDL_DestroySurface(welcome_surface_input);
-            SDL_DestroyTexture(welcome_texture_input);
-            
-            // Initialising surface for input
-            if (input_string.length == 0)
-            {
-                welcome_surface_input = TTF_RenderText_Blended(text_font, initial_text_input, strlen(initial_text_input), font_color);   
-            }
-            else
-            {
-                welcome_surface_input = TTF_RenderText_Blended(text_font, input_string.input, input_string.length, font_color);   
-            }
-
-            check_surface(welcome_surface_input, "Could not update surface for rendering input string.");
-
-            // Initialising texture for input
-            welcome_texture_input = SDL_CreateTextureFromSurface(welcome_renderer, welcome_surface_input);
-            check_texture(welcome_texture_input, "Could not update texture for rendering input string.");
-        }
-
-        // Render border for text box
-        SDL_RenderRect(welcome_renderer, &box_rect);
-
-        // Render border for continue button
-        SDL_RenderRect(welcome_renderer, &continue_box_rect);
-
-        // Render texture for input text
-        if (!SDL_RenderTexture(welcome_renderer, welcome_texture_input, NULL, &input_rect))
-        {
-            SDL_Log("Could not render input text. Reason: %s\n", SDL_GetError());
-        }
-
         // Render texture for title text
         if (!SDL_RenderTexture(welcome_renderer, welcome_texture, NULL, &title_rect))
         {
             SDL_Log("Could not render title text (texture) on welcome screen. Reason: %s\n", SDL_GetError());
         }
 
-        // Render texture for continue button texr
+        // Render texture for continue button text
         if (!SDL_RenderTexture(welcome_renderer, continue_texture, NULL, &continue_text_rect))
         {
             SDL_Log("Could not render continue button text. Reason: %s\n", SDL_GetError());
@@ -387,7 +375,25 @@ char *open_welcome_window(void)
                 SDL_Log("Could not render texture for buttons. Reason: %s\n", SDL_GetError());
             }
         }
-        
+
+        // Display file name
+        SDL_RenderRect(welcome_renderer, &name_box_rect);
+        if (!SDL_RenderTexture(welcome_renderer, name_texture, NULL, &name_text_rect))
+        {
+            SDL_Log("Could not render texture for displaying file name. Reason: %s\n", SDL_GetError());
+        }
+
+        // Render border for continue button
+        if (can_continue == true)
+        {
+            SDL_SetRenderDrawColor(welcome_renderer, 0, 255, 0, 255);
+        }
+        else
+        {
+            SDL_SetRenderDrawColor(welcome_renderer, 255, 0, 0, 255);
+        }
+        SDL_RenderRect(welcome_renderer, &continue_box_rect);
+    
         // Render present 
         if (!SDL_RenderPresent(welcome_renderer))
         {
@@ -399,21 +405,18 @@ char *open_welcome_window(void)
         {
             buttons[i].just_changed = false;
         }
-
-        // Reset has_changed (refers to the user's filename input)
-        has_changed = false;
     }
 
-    char *file_name = malloc((input_string.length + 1) * sizeof(char));
+    char *final_file_name = malloc((strlen(file_name) + 1) * sizeof(char));
 
-    if (file_name != NULL)
+    if (final_file_name != NULL)
     {
-        file_name = strcpy(file_name, input_string.input);
+        final_file_name = strcpy(final_file_name, file_name);
     }
     else
     {
         SDL_Log("Could not allocate memory for file name.");
     }
 
-    return file_name;
+    return final_file_name;
 }
