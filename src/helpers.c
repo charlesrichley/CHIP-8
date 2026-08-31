@@ -22,6 +22,14 @@ uint8_t sprite_arr[80] = {0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
 0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
 0xF0, 0x80, 0xF0, 0x80, 0x80}; // F
 
+void callback(void *userdata, const char * const *filelist, int filter)
+{
+    if (filelist != NULL && *filelist != NULL)
+    {
+        *(char **)userdata = SDL_strdup(filelist[0]);
+    }
+}
+
 void initialise(Stack *stack)
 {
     stack->top = -1;
