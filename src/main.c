@@ -63,9 +63,9 @@ int main(void)
         ROM_file = fopen("space_invaders.ch8", "r");
     }
 
-    // Determine size of file
+    // Determine size of file (in bytes)
     fseek(ROM_file, 0, SEEK_END);
-    long size = ftell(ROM_file); // size of file in bytes
+    long size = ftell(ROM_file); 
 
     // CHIP-8 program starts at 0x200 - ensure file doesn't exceed memory capacity
     if (size > (4096 - 0x200))
@@ -725,9 +725,6 @@ int main(void)
 
     if (quitting)
     {
-        // Free memory allocated in welcome.c for the ROM file name
-        free(file_name);
-
         SDL_DestroyWindow(window);
         SDL_DestroyRenderer(renderer);
         SDL_Quit();
