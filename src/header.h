@@ -21,9 +21,6 @@
 // CHIP-8 has ambigious specification, so different ROMS rely on different quirks
 #define NUMBER_OF_QUIRKS 8
 
-// For user input of file name
-#define MAX_FILE_NAME_SIZE 1000
-
 // Constants for buttons to toggle quirks on and off
 #define BUTTON_WIDTH 11
 #define BUTTON_HEIGHT 4
@@ -50,13 +47,6 @@ typedef struct
     SDL_Scancode scancode;
     bool is_down;
 } Keypad;
-
-// Input string for user inputting a filename
-typedef struct
-{
-    char input[MAX_FILE_NAME_SIZE];
-    int length; 
-} Input_String;
 
 typedef struct
 {
@@ -111,6 +101,9 @@ extern Button buttons[NUMBER_OF_QUIRKS];
 
 // Main function in helpers.c that runs the welcome screen
 char *open_welcome_window(void);
+
+// Callback function for opening a file
+void callback(void *userdata, const char * const *filelist, int filter);
 
 // Initialises a stack
 void initialise(Stack *stack);
