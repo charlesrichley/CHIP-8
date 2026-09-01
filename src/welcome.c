@@ -340,34 +340,30 @@ char *open_welcome_window(void)
                     can_continue = false;
                 } 
                 fclose(ROM_file);
-
-                // Update display_name
-                file.display_name = strrchr(file.file_name, '/');
-                if (file.display_name != NULL)
-                {
-                    // Get rid of the slash at the beginning
-                    file.display_name += 1;
-                }
-                else
-                {
-                    SDL_Log("strrchr failed for updating display name for file.");
-                }
             }
+            
+            // Initialise variables for updating text underneath continue button (displays file name)
+            SDL_DestroyTexture(file.texture);
+            SDL_DestroySurface(file.surface);
+            SDL_Surface *new_name_surface;
+            SDL_Texture *new_name_texture;
+            char *error_message = "ERROR";
 
             if (can_continue == true)
             {
-                SDL_DestroyTexture(file.texture);
-                SDL_DestroySurface(file.surface);
-
-                SDL_Surface *new_name_surface = TTF_RenderText_Blended(text_font, file.display_name, strlen(file.display_name), font_color);
-                check_surface(new_name_surface, "Could not render new surface for displaying file name.");
-
-                SDL_Texture *new_name_texture = SDL_CreateTextureFromSurface(welcome_renderer, new_name_surface);
-                check_texture(new_name_texture, "Could not render new texture for displayinf file name.");
-
-                file.surface = new_name_surface;
-                file.texture = new_name_texture;
+                new_name_surface = TTF_RenderText_Blended(text_font, file.display_name, strlen(file.display_name), font_color);
             }
+            else
+            {
+                new_name_surface = TTF_RenderText_Blended(text_font, error_message, strlen(error_message), font_color);
+            }
+            
+            new_name_texture = SDL_CreateTextureFromSurface(welcome_renderer, new_name_surface);
+            
+            check_surface(new_name_surface, "Could not render new surface for displaying file name.");
+            check_texture(new_name_texture, "Could not render new texture for displayinf file name.");
+            file.surface = new_name_surface;
+            file.texture = new_name_texture;
         }
 
         // Render open file button
