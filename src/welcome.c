@@ -173,24 +173,33 @@ char *open_welcome_window(void)
     const SDL_FRect file_text_rect = get_frect(file_x, file_y, file_box_width - 4, file_box_height - 2, true);
 
     // Initialise button for opening ROM file
-    char *name_button_str = "NO FILE SELECTED";
-    SDL_Surface *name_surface = TTF_RenderText_Blended(font, name_button_str, strlen(name_button_str), font_color);
+    char *initial_file_name = "NO FILE SELECTED";
+    SDL_Surface *name_surface = TTF_RenderText_Blended(font, initial_file_name, strlen(initial_file_name), font_color);
     check_surface(name_surface, "Could not create surface for displaying file name.");
 
     SDL_Texture *name_texture = SDL_CreateTextureFromSurface(welcome_renderer, name_surface);
     check_texture(name_texture, "Could not create texture for displaying file name.");
 
     // Get rectangles for displaying file name (underneath continue button)
-    const int name_box_width = 10;
+    const int name_box_width = 18;
     const int name_box_height = 5;
 
     const int name_x = 54;
-    const int name_y = 48;
-    const SDL_FRect name_box_rect = get_frect(name_x, name_y, name_box_width, name_box_height, true);
+    const int name_y = 8;
     const SDL_FRect name_text_rect = get_frect(name_x, name_y, name_box_width - 4, name_box_height - 2, true);
 
-    // Initialise file name - edited later by selecting game in menu or opening file
+    // Initialise variables for tracking file
     char *file_name;
+    char *user_file_name;
+    char *display_name;
+    File file;
+    file.surface = name_surface;
+    file.texture = name_texture;
+    file.text_rect = name_text_rect;
+    file.file_name = file_name;
+    file.user_file_name = user_file_name;
+    file.display_name = display_name;
+    file.has_changed = false;
 
     // Variables for loop
     bool quitting = false;
@@ -201,6 +210,8 @@ char *open_welcome_window(void)
 
     while (!quitting)
     {
+        // printf("File name %s\n", file.file_name);
+
         // Reset colour to black before clearing for black background
         SDL_SetRenderDrawColor(welcome_renderer, 0, 0, 0, 255);
 
@@ -244,7 +255,10 @@ char *open_welcome_window(void)
                     {
                         if (fabsf(((float)games[i].x - x_click)) < (menu_box_width / 2) && fabsf((float)games[i].y - y_click) < (menu_box_height / 2))
                         {
-                            file_name = games[i].file_name;
+                            // No need to check this as the built-in games have been tested
+                            file.file_name = games[i].file_name;
+                            file.display_name = games[i].name;
+                            file.has_changed = true;
                             can_continue = true;
                         }
                     }
@@ -259,7 +273,7 @@ char *open_welcome_window(void)
                     if (fabsf(((float)file_x - x_click)) < (file_box_width / 2) && fabsf((float)file_y - y_click) < (file_box_height / 2))
                     {
                         // Open up file selection window
-                        SDL_ShowOpenFileDialog(callback, &file_name, welcome_window, NULL, 0, NULL, false);
+                        SDL_ShowOpenFileDialog(callback, &file, welcome_window, NULL, 0, NULL, false);
                     }
 
                     break;
@@ -284,6 +298,8 @@ char *open_welcome_window(void)
                 SDL_DestroyTexture(games[i].texture);
             }
 
+            SDL_DestroySurface(file_surface);
+            SDL_DestroyTexture(file.texture);
             SDL_DestroyWindow(welcome_window);
             SDL_DestroyRenderer(welcome_renderer);
             SDL_DestroyTexture(welcome_texture);
@@ -295,28 +311,64 @@ char *open_welcome_window(void)
             break;
         }
 
-        // Check file is not NULL and has valid size
-        FILE *ROM_file = fopen(file_name, "r");
-        if (ROM_file != NULL)
+        // Update file name text
+        if (file.has_changed == true)
         {
-            // Determine size of file (in bytes)
-            fseek(ROM_file, 0, SEEK_END);
-            long size = ftell(ROM_file);
+            if (file.user_input_changed == true)
+            {
+                // Check file user uploaded is not NULL and has valid size
+                FILE *ROM_file = fopen(file.user_file_name, "r");
+                if (ROM_file != NULL)
+                {
+                    // Determine size of file (in bytes)
+                    fseek(ROM_file, 0, SEEK_END);
+                    long size = ftell(ROM_file);
 
-            // CHIP-8 program starts at 0x200 - ensure file doesn't exceed memory capacity
-            if (size > (4096 - 0x200))
-            {
-                can_continue = false;
+                    // CHIP-8 program starts at 0x200 - ensure file doesn't exceed memory capacity
+                    if (size > (4096 - 0x200))
+                    {
+                        can_continue = false;
+                    }
+                    else
+                    {
+                        file.file_name = file.user_file_name;
+                        can_continue = true;
+                    }
+                }
+                else
+                {
+                    can_continue = false;
+                } 
+                fclose(ROM_file);
+
+                // Update display_name
+                file.display_name = strrchr(file.file_name, '/');
+                if (file.display_name != NULL)
+                {
+                    // Get rid of the slash at the beginning
+                    file.display_name += 1;
+                }
+                else
+                {
+                    SDL_Log("strrchr failed for updating display name for file.");
+                }
             }
-            else
+
+            if (can_continue == true)
             {
-                can_continue = true;
+                SDL_DestroyTexture(file.texture);
+                SDL_DestroySurface(file.surface);
+
+                SDL_Surface *new_name_surface = TTF_RenderText_Blended(text_font, file.display_name, strlen(file.display_name), font_color);
+                check_surface(new_name_surface, "Could not render new surface for displaying file name.");
+
+                SDL_Texture *new_name_texture = SDL_CreateTextureFromSurface(welcome_renderer, new_name_surface);
+                check_texture(new_name_texture, "Could not render new texture for displayinf file name.");
+
+                file.surface = new_name_surface;
+                file.texture = new_name_texture;
             }
         }
-        else
-        {
-            can_continue = false;
-        }        
 
         // Render open file button
         if (!SDL_RenderTexture(welcome_renderer, file_texture, NULL, &file_text_rect))
@@ -377,8 +429,7 @@ char *open_welcome_window(void)
         }
 
         // Display file name
-        SDL_RenderRect(welcome_renderer, &name_box_rect);
-        if (!SDL_RenderTexture(welcome_renderer, name_texture, NULL, &name_text_rect))
+        if (!SDL_RenderTexture(welcome_renderer, file.texture, NULL, &file.text_rect))
         {
             SDL_Log("Could not render texture for displaying file name. Reason: %s\n", SDL_GetError());
         }
@@ -405,9 +456,13 @@ char *open_welcome_window(void)
         {
             buttons[i].just_changed = false;
         }
+
+        // Reset has_changed
+        file.has_changed = false;
+        file.user_input_changed = false;
     }
 
-    char *final_file_name = malloc((strlen(file_name) + 1) * sizeof(char));
+    char *final_file_name = malloc((strlen(file.file_name) + 1) * sizeof(char));
 
     if (final_file_name != NULL)
     {
