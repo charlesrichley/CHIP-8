@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
-#include <time.h>
 #include <SDL3/SDL.h>
 #include <SDL3_image/SDL_image.h>
 #include <SDL3_ttf/SDL_ttf.h>
@@ -73,6 +72,18 @@ typedef struct
     char *name;
     char *file_name;
 } Game;
+
+typedef struct 
+{
+    SDL_Surface *surface;
+    SDL_Texture *texture;
+    SDL_FRect text_rect;
+    char *file_name;
+    char *user_file_name;
+    char *display_name;
+    bool user_input_changed;
+    bool has_changed;
+} File;
 
 enum {
     RESET_VF,
