@@ -1,4 +1,4 @@
-# CHIP-8
+# CHIP-8 EMULATOR
 I am currently developing a CHIP-8 emulator in C (_**work in progress**_).
 
 ### Compiler message 
