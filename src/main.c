@@ -60,7 +60,8 @@ int main(void)
     if (ROM_file == NULL)
     {
         // Open up a game we know works instead
-        ROM_file = fopen("space_invaders.ch8", "r");
+        SDL_Log("ROM file is NULL.");
+        return 1;
     }
 
     // Determine size of file (in bytes)
