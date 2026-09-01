@@ -333,6 +333,18 @@ char *open_welcome_window(void)
                     {
                         file.file_name = file.user_file_name;
                         can_continue = true;
+
+                        // Update display_name
+                        file.display_name = strrchr(file.file_name, '/');
+                        if (file.display_name != NULL)
+                        {
+                            // Get rid of the slash at the beginning
+                            file.display_name += 1;
+                        }
+                        else
+                        {
+                            SDL_Log("strrchr failed for updating display name for file.");
+                        }
                     }
                 }
                 else
@@ -462,7 +474,7 @@ char *open_welcome_window(void)
 
     if (final_file_name != NULL)
     {
-        final_file_name = strcpy(final_file_name, file_name);
+        strcpy(final_file_name, file.file_name);
     }
     else
     {
