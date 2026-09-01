@@ -26,7 +26,10 @@ void callback(void *userdata, const char * const *filelist, int filter)
 {
     if (filelist != NULL && *filelist != NULL)
     {
-        *(char **)userdata = SDL_strdup(filelist[0]);
+        File *data = (File *)userdata;
+        data->user_file_name = SDL_strdup(filelist[0]);
+        data->has_changed = true;
+        data->user_input_changed = true;
     }
 }
 
