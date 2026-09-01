@@ -3,7 +3,6 @@
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
-#include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 #include <SDL3/SDL.h>
@@ -20,12 +19,12 @@
 // CHIP-8 has ambigious specification, so different ROMS rely on different quirks
 #define NUMBER_OF_QUIRKS 8
 
+// Number of games in the top left menu
+#define NUMBER_OF_GAMES 3
+
 // Constants for buttons to toggle quirks on and off
 #define BUTTON_WIDTH 11
 #define BUTTON_HEIGHT 4
-
-// Number of games in the top left menu
-#define NUMBER_OF_GAMES 3
 
 typedef struct 
 {
