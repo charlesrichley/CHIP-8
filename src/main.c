@@ -31,7 +31,7 @@ int main(void)
     quirks[DRAW_WAIT].quirk_string = "DRAW WAIT";
 
     // Sprites get clipped instead of wrapping in DXYN
-    quirks[CLIPPING].is_on = false;
+    quirks[CLIPPING].is_on = true;
     quirks[CLIPPING].quirk_string = "CLIPPING";
 
     // 8XY6 and 8XYE only operate on VX instead of storing shifted VY in VX
@@ -43,7 +43,7 @@ int main(void)
     quirks[JUMPING].quirk_string = "JUMPING";
 
     // FX1E sets VF to 0 if the index registers overflow
-    quirks[FX1E_OVERFLOW].is_on = true;
+    quirks[FX1E_OVERFLOW].is_on = false;
     quirks[FX1E_OVERFLOW].quirk_string = "OVERFLOW";
 
     // FX0A resumes execution if the key is both pressed and released or simply pressed
