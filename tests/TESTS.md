@@ -4,4 +4,4 @@ Tests have been taken from the CHIP-8 test suite: https://github.com/Timendus/ch
 
 ### Screenshots
 
-Screenshots (and a video) showing passing of tests are available in the screenshots folder (inside this tests folder).
+Screenshots (and a video) showing completion of tests are available in the screenshots folder (inside this tests folder).
