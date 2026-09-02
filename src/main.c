@@ -106,6 +106,7 @@ int main(void)
         }
     }
     
+    // Get main window and renderer for CHIP-8 emulator
     SDL_Window* window = SDL_CreateWindow("CHIP-8", WIDTH * SCALE, HEIGHT * SCALE, 0);
     check_window(window, "Could not initialise main window.");
 
@@ -142,6 +143,7 @@ int main(void)
     while (!quitting)
     {
         uint64_t frame_start = SDL_GetTicksNS();
+
         if (!SDL_RenderClear(renderer))
         {
             SDL_Log("Could not clear renderer during main loop. Reason: %s\n", SDL_GetError());
@@ -158,6 +160,7 @@ int main(void)
                 {
                     if (fx0a_waiting)
                     {
+                        // Find the key that was pressed down by its scancode
                         SDL_Scancode event_scancode = event.key.scancode;
                         int index_key_down = scancode_to_index(keypad, event_scancode);
 
@@ -170,6 +173,7 @@ int main(void)
                             break;
                         }
 
+                        // If the key is part of the emulated CHIP-8 keypad
                         if (index_key_down != -1)
                         {
                             keypad[index_key_down].is_down = true;
@@ -180,6 +184,7 @@ int main(void)
 
                 case SDL_EVENT_KEY_UP:
                 {
+                    // If quirk enabled, FX0A requires both press and release of a key
                     if (fx0a_waiting && quirks[FX0A_PRESSED_AND_RELEASED].is_on)
                     {
                         SDL_Scancode event_scancode = event.key.scancode;
@@ -267,14 +272,14 @@ int main(void)
 
         for (int instructions_read = 0; instructions_read < INSRUCTIONS_PER_FRAME; instructions_read++)
         {
-            // Fetch
+            // Fetch instruction
             uint16_t instruction_1 = memory[pc] << 8;
             uint16_t instruction_2 = memory[pc + 1];
             uint16_t opcode = instruction_1 | instruction_2;
             pc += 2;
 
-            // Decode: opcode is made up of 4 nibbles (each 4 bits)
-            // we use masking and shifting to get each nibble
+            // Decode instruciton: opcode is made up of 4 nibbles (each 4 bits)
+            // We use masking and shifting to get each nibble
 
             uint8_t mask = 0xF; // 4 rightmost bits (1111 in binary)
             uint8_t nibble_1 = (opcode >> 12) & mask; // find the kind of instruction
@@ -288,17 +293,25 @@ int main(void)
             uint8_t x = nibble_2;
             uint8_t y = nibble_3;
 
-            // Keyboard input for EX9E and EXA1 - 
-            // if key is CURRENTLY being held down (different to FX0A)
+            // Keyboard input for EX9E and EXA1 - if key is CURRENTLY being held down (different to FX0A)
             int curr_key = chip_8_to_keyboard(registers[x]);
             const bool *ex_keyboard = SDL_GetKeyboardState(NULL);
             if (ex_keyboard == NULL)
             {
                 SDL_Log("Keyboard is NULL. Reason: %s\n", SDL_GetError());
             }
-            SDL_Scancode ex_scancode = keypad[keyboard_to_index(curr_key)].scancode;
 
-            // Execute
+            SDL_Scancode ex_scancode;
+            if (curr_key != -1)
+            {
+                ex_scancode = keypad[keyboard_to_index(curr_key)].scancode;
+            }
+            else
+            {
+                ex_scancode = SDL_SCANCODE_UNKNOWN;
+            }
+
+            // Execute instructions
             switch (nibble_1){
                 case 0x0:
                     switch(nibble_4){
@@ -368,6 +381,7 @@ int main(void)
                 case 0x8: {
                     uint8_t orig_registers_x = registers[x];
                     uint8_t orig_registers_y = registers[y];
+
                     switch(nibble_4){
                         // 8XY0: set
                         case 0x0:
@@ -544,7 +558,7 @@ int main(void)
                                 }
                                 else
                                 {
-                                    x_coord *= WIDTH;
+                                    x_coord %= WIDTH;
                                 }
                             }
 
@@ -566,6 +580,7 @@ int main(void)
                         y_coord += 1;
                     }
                     
+                    // Can only call DXYN once per frame
                     if (quirks[DRAW_WAIT].is_on)
                     {
                         DXYN_PAUSED = true;
@@ -575,17 +590,17 @@ int main(void)
 
                 case 0xE:
                     switch(nibble_4){
-                        // EX9E: skip if key
+                        // EX9E: skip if VX key pressed
                         case 0xE:
-                            if (ex_keyboard[ex_scancode] && curr_key != -1)
+                            if (ex_scancode != SDL_SCANCODE_UNKNOWN && ex_keyboard[ex_scancode])
                             {
                                 pc += 2;
                             }
                             break;
                             
-                        // EXA1: skip if key
+                        // EXA1: skip if VX key not pressed
                         case 0x1:
-                            if (!ex_keyboard[ex_scancode] && curr_key != -1)
+                            if (ex_scancode != SDL_SCANCODE_UNKNOWN && !ex_keyboard[ex_scancode])
                             {
                                 pc += 2;
                             }
@@ -615,7 +630,7 @@ int main(void)
                                     }
                                     if (quirks[MEMORY].is_on)
                                     {
-                                        index_register+= (x + 1);
+                                        index_register += (x + 1);
                                     }
                                     break;
 
@@ -645,10 +660,12 @@ int main(void)
                             // On original COSMAC VIP, VF was not affected on overflow
                             // However, CHIP-8 interpreter for Amiga would set VF to 1 on overflow
                             if (quirks[FX1E_OVERFLOW].is_on)
+                            {
                                 if (index_register > 0x0FFF)
                                 {
                                     registers[0xF] = 1;
                                 }
+                            }
                             break;
 
                         // FX0A: get key (stops execution and waits for key input)
