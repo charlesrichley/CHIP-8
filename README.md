@@ -17,6 +17,6 @@ I developed a CHIP-8 emulator using C (and the SDL3 library), with extensive sup
 ## Compiler message 
 "clang main.c helpers.c -o main $(pkg-config --cflags --libs sdl3 sdl3-image) && ./main"
 
-### Games sources (open source)
+## Games sources (open source)
 https://johnearnest.github.io/chip8Archive/?sort=platform
 https://www.zophar.net/pdroms/chip8/chip-8-games-pack.html
