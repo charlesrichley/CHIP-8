@@ -14,13 +14,9 @@ I developed a CHIP-8 emulator using C (and the SDL3 library), with extensive sup
 | FX1E OVERFLOW | ___ | OFF |
 | FX0A PRESSED AND RELEASED | ____ | ON |
 
-### Compiler message 
+## Compiler message 
 "clang main.c helpers.c -o main $(pkg-config --cflags --libs sdl3 sdl3-image) && ./main"
 
-### Games sources
+### Games sources (open source)
 https://johnearnest.github.io/chip8Archive/?sort=platform
 https://www.zophar.net/pdroms/chip8/chip-8-games-pack.html
-
-### Octo
-https://johnearnest.github.io/Octo/docs/BeginnersGuide.html?utm_source=chatgpt.com
-https://johnearnest.github.io/Octo/
