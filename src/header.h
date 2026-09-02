@@ -101,10 +101,11 @@ enum {
     SPACE_INVADERS
 };
 
+extern uint8_t sprite_arr[80];
+
 extern int chip_8_arr[16];
 extern char keyboard_arr[16];
 extern SDL_Scancode scancode_arr[16];
-extern uint8_t sprite_arr[80];
 
 extern Quirk quirks[NUMBER_OF_QUIRKS];
 extern Button buttons[NUMBER_OF_QUIRKS];
@@ -140,7 +141,7 @@ SDL_FRect get_frect(int i, int j, int w, int h, bool is_centered);
 // Creates a button when given all necessary features
 Button get_button(int x, int y, char *string, bool is_on, TTF_Font *font, SDL_Color font_color, SDL_Renderer *renderer, SDL_FRect rect, SDL_FRect title_rect);
 
-// Checks NULL for all SDL types
+// Checks NULL for all SDL types and logs errors
 void check_renderer(SDL_Renderer *renderer, char *message);
 void check_window(SDL_Window *window, char *message);
 void check_surface(SDL_Surface *surface, char *message);
