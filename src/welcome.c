@@ -112,6 +112,7 @@ char *open_welcome_window(void)
     games[SPACE_INVADERS].name = "SPACE INVADERS";
     games[SPACE_INVADERS].file_name = "space_invaders.ch8";
 
+    // Coordinate settings for rendering game selection menu
     const int menu_x_start = 8;
     const int menu_y_start = 3;
     const int menu_width = 10;
@@ -210,8 +211,6 @@ char *open_welcome_window(void)
 
     while (!quitting)
     {
-        // printf("File name %s\n", file.file_name);
-
         // Reset colour to black before clearing for black background
         SDL_SetRenderDrawColor(welcome_renderer, 0, 0, 0, 255);
 
@@ -238,7 +237,7 @@ char *open_welcome_window(void)
                         SDL_Log("Could not get x and y coordinates of click. Reason: %s\n", SDL_GetError());
                     }
 
-                    // Handle buttons for quirks 
+                    // Quirk has been selected
                     for (int i = 0; i < NUMBER_OF_QUIRKS; i++)
                     {
                         // Check which button is being pressed
@@ -250,7 +249,7 @@ char *open_welcome_window(void)
                         }
                     }
 
-                    // Handle buttons for game selection
+                    // Game has been selected
                     for (int i = 0; i < NUMBER_OF_GAMES; i++)
                     {
                         if (fabsf(((float)games[i].x - x_click)) < (menu_box_width / 2) && fabsf((float)games[i].y - y_click) < (menu_box_height / 2))
@@ -263,13 +262,13 @@ char *open_welcome_window(void)
                         }
                     }
 
-                    // Handle continue button
+                    // Continue button clicked
                     if (can_continue && fabsf(((float)continue_x - x_click)) < (continue_box_width / 2) && fabsf((float)continue_y - y_click) < (continue_box_height / 2))
                     {
                         quitting = true;
                     }
 
-                    // Handle open file button
+                    // Open file button clicked
                     if (fabsf(((float)file_x - x_click)) < (file_box_width / 2) && fabsf((float)file_y - y_click) < (file_box_height / 2))
                     {
                         // Open up file selection window
@@ -370,6 +369,7 @@ char *open_welcome_window(void)
                 new_name_surface = TTF_RenderText_Blended(text_font, error_message, strlen(error_message), font_color);
             }
             
+            // Update surfaces and texture for new file name
             new_name_texture = SDL_CreateTextureFromSurface(welcome_renderer, new_name_surface);
             
             check_surface(new_name_surface, "Could not render new surface for displaying file name.");
@@ -465,7 +465,7 @@ char *open_welcome_window(void)
             buttons[i].just_changed = false;
         }
 
-        // Reset has_changed
+        // Reset has_changed and user_input_changed for tracking the file name
         file.has_changed = false;
         file.user_input_changed = false;
     }
@@ -478,7 +478,7 @@ char *open_welcome_window(void)
     }
     else
     {
-        SDL_Log("Could not allocate memory for file name.");
+        SDL_Log("Could not allocate memory for file name.\n");
     }
 
     return final_file_name;
