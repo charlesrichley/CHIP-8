@@ -12,7 +12,7 @@ I developed a CHIP-8 emulator using C (and the SDL3 library), with extensive sup
 | SHIFTING | ___ | ON |
 | JUMPIUNG | ___ | OFF |
 | FX1E OVERFLOW | ___ | OFF |
-| FX0A PRESSED AND RELEASED | ____ | ON |
+| FX0A PRESSED AND RELEASED | ___ | ON |
 
 ## Compiler message 
 "clang main.c helpers.c -o main $(pkg-config --cflags --libs sdl3 sdl3-image) && ./main"
