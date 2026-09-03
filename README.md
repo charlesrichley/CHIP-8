@@ -11,7 +11,7 @@ I developed a CHIP-8 emulator using C (and the SDL3 library), with extensive sup
 | CLIPPING | Sprites get clipped instead of wrapping in DXYN | ON |
 | SHIFTING | 8XY6 and 8XYE only operate on VX instead of storing shifted VY in VX | ON |
 | JUMPING | BNNN doesn't use V0, but VX instead (X is first nibble in NNN) | OFF |
-| FX1E OVERFLOW | FX1E sets VF to 1 if the index registers overflow | OFF |
+| FX1E OVERFLOW | FX1E sets VF to 1 if the index register overflows | OFF |
 | FX0A PRESSED AND RELEASED | FX0A resumes execution if the key is both pressed and released or simply pressed | ON |
 
 ## ROM sources
