@@ -5,7 +5,7 @@ I developed a CHIP-8 emulator using C (and the SDL3 library), with extensive sup
 ## Quirks
 | Name | Functionality | Default |
 |---|---|---|
-| RESET VF | 8XY1, 8XY2, 8XY3 reset registers[0xF] to 0 | OFF |
+| RESET VF | 8XY1, 8XY2, 8XY3 reset VF to 0 | OFF |
 | MEMORY | FX55 and FX65 increment index register | OFF |
 | DRAW WAIT | DXYN only called once per frame | OFF |
 | CLIPPING | Sprites get clipped instead of wrapping in DXYN | ON |
