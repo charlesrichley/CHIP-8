@@ -14,10 +14,10 @@ I developed a CHIP-8 emulator using C (and the SDL3 library), with extensive sup
 | FX1E OVERFLOW | FX1E sets VF to 0 if the index registers overflow | OFF |
 | FX0A PRESSED AND RELEASED | FX0A resumes execution if the key is both pressed and released or simply pressed | ON |
 
-## Compiler message 
-"clang main.c helpers.c welcome.c -o main $(pkg-config --cflags --libs sdl3 sdl3-image sdl3-ttf) && ./main \"/Users/charlesrichley/chip_8/welcome.c\""
-
 ## ROM sources
 [Zophar PD ROM Pack](https://www.zophar.net/pdroms/chip8/chip-8-games-pack.html) — `tests/test_roms/`
 
 [Timendus CHIP-8 Test Suite](https://github.com/Timendus/chip8-test-suite) - `roms/`
+
+## How to install
+TODO - makefile
