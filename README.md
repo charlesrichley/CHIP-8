@@ -20,4 +20,4 @@ I developed a CHIP-8 emulator using C (and the SDL3 library), with extensive sup
 ## ROM sources
 [Zophar PD ROM Pack](https://www.zophar.net/pdroms/chip8/chip-8-games-pack.html) — `tests/test_roms/`
 
-[Timendus CHIP-8 Test Suite](https://github.com/Timendus/chip8-test-suite) - `roms`
+[Timendus CHIP-8 Test Suite](https://github.com/Timendus/chip8-test-suite) - `roms/`
