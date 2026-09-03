@@ -15,8 +15,8 @@ I developed a CHIP-8 emulator using C (and the SDL3 library), with extensive sup
 | FX0A PRESSED AND RELEASED | FX0A resumes execution if the key is both pressed and released or simply pressed | ON |
 
 ## Compiler message 
-"clang main.c helpers.c -o main $(pkg-config --cflags --libs sdl3 sdl3-image) && ./main"
+"clang main.c helpers.c welcome.c -o main $(pkg-config --cflags --libs sdl3 sdl3-image sdl3-ttf) && ./main \"/Users/charlesrichley/chip_8/welcome.c\""
 
-## Games sources (open source)
-https://johnearnest.github.io/chip8Archive/?sort=platform
-https://www.zophar.net/pdroms/chip8/chip-8-games-pack.html
+## ROM sources
+[roms/] https://johnearnest.github.io/chip8Archive/?sort=platform
+[tests/test_roms/] https://www.zophar.net/pdroms/chip8/chip-8-games-pack.html
