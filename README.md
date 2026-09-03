@@ -18,6 +18,6 @@ I developed a CHIP-8 emulator using C (and the SDL3 library), with extensive sup
 "clang main.c helpers.c welcome.c -o main $(pkg-config --cflags --libs sdl3 sdl3-image sdl3-ttf) && ./main \"/Users/charlesrichley/chip_8/welcome.c\""
 
 ## ROM sources
-[CHIP-8 Archive](https://johnearnest.github.io/chip8Archive/?sort=platform) —  `roms/`
-
 [Zophar PD ROM Pack](https://www.zophar.net/pdroms/chip8/chip-8-games-pack.html) — `tests/test_roms/`
+
+[Timendus CHIP-8 Test Suite](https://github.com/Timendus/chip8-test-suite) - `roms`
