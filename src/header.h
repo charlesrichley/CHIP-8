@@ -4,9 +4,9 @@
 #include <ctype.h>
 #include <math.h>
 #include <string.h>
+#include <time.h>
 #include <strings.h>
 #include <SDL3/SDL.h>
-#include <SDL3_image/SDL_image.h>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <inttypes.h>
 
