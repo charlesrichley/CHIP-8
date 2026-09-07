@@ -6,9 +6,6 @@ I developed a CHIP-8 emulator using C (and the SDL3 library), with extensive sup
 
 <p align="center">
   <img src="images/launch_screen.png" width="500">
-</p>
-
-<p align="center">
   <img src="images/pong_example.png" width="500">
 </p>
 
