@@ -3,8 +3,8 @@
 I developed a CHIP-8 emulator using C (and the SDL3 library), with extensive support across the range of quirks that CHIP-8 has. A launch screen allows users to select a ROM from a default menu, or open their own ROM. There are 8 quirks that can be customised to ensure compatibility.
 
 <p align="center">
-  <img src="images/launch_screen.png" width="40%">
-  <img src="images/pong_example.png" width="40%">
+  <img src="images/launch_screen.png" width="45%">
+  <img src="images/pong_example.png" width="45%">
 </p>
 
 ## Quirks
