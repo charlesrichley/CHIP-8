@@ -1,6 +1,6 @@
 # CHIP-8 emulator with quirk customizability and quick game launching 
 
-**[Watch the video demonstration](https://www.youtube.com/watch?v=AUNJEI67OA8)**
+**[Video demonstration](https://www.youtube.com/watch?v=AUNJEI67OA8)**
 
 I developed a CHIP-8 emulator using C (and the SDL3 library), with extensive support across the range of quirks that CHIP-8 has. A launch screen allows users to select a ROM from a default menu, or open their own ROM. There are 8 quirks that can be customised to ensure compatibility.
 
